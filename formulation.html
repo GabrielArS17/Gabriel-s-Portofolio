@@ -1,0 +1,605 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Paint Formulation Manager Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,500..800&family=IBM+Plex+Mono:wght@400;500&family=Source+Sans+3:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="assets/demo.css">
+<style>
+.flist{display:grid;gap:4px}
+.fitem{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;text-align:left;font:inherit;color:var(--ink);background:none;border:1px solid transparent;border-radius:8px;padding:9px 10px;cursor:pointer}
+.fitem:hover{background:var(--surface-2)}
+.fitem[aria-pressed="true"]{background:var(--sel);border-color:var(--line)}
+.fitem b{font-weight:700}
+.fitem small{grid-column:1;font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+.fitem .c{grid-row:1/3;grid-column:2;align-self:center;font-family:var(--font-mono);font-size:13px;color:var(--ink-2);text-align:right}
+.fhead{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 16px;align-items:baseline;margin-bottom:14px}
+.fhead h2{font-size:24px;font-weight:760;font-stretch:112%;color:var(--navy)}
+.fhead .meta{font-size:14px;color:var(--ink-2);display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
+.hbars{display:grid;gap:8px}
+.hbar{display:grid;grid-template-columns:86px minmax(0,1fr) 150px;gap:10px;align-items:center;font-size:14px}
+.hbar .track{height:14px;position:relative}
+.hbar .track span{position:absolute;left:0;top:0;bottom:0;background:var(--s1);border-radius:0 4px 4px 0}
+.hbar .val{text-align:right;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.hbar .val b{color:var(--ink)}
+@media (max-width:520px){.hbar{grid-template-columns:72px minmax(0,1fr);}.hbar .val{grid-column:1/-1;text-align:left;margin-top:-4px}}
+.ed input{width:84px;text-align:right;padding:5px 7px}
+.ed select{max-width:240px;padding:5px 7px}
+.ed tr.chg td{background:var(--sel)}
+.chgtag{font-size:12px;font-weight:700;color:var(--accent-ink);background:var(--accent-soft);border-radius:4px;padding:0 5px;white-space:nowrap}
+.big{font-family:var(--font-display);font-weight:760;font-stretch:110%;font-size:30px;line-height:1.1}
+.delta{font-weight:700}
+.delta.down{color:var(--good-ink)}
+.delta.up{color:var(--crit-ink)}
+.sumrow{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 14px;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--line);font-size:14.5px}
+.sumrow:last-of-type{border-bottom:0}
+.sumrow .k{color:var(--ink-2)}
+.changes{margin:6px 0 0;padding-left:18px;font-size:14px;color:var(--ink-2);display:grid;gap:2px}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px 12px}
+.pgrid input{width:100%}
+.recs{margin:0;padding-left:18px;display:grid;gap:6px;font-size:14.5px}
+.recs b{color:var(--ink)}
+.swatches{display:grid;grid-template-columns:1fr 1fr;gap:0;border-radius:10px;overflow:hidden;border:1px solid var(--line);margin:12px 0}
+.sw{height:120px;display:flex;align-items:flex-end;padding:8px 10px}
+.sw + .sw{border-left:2px solid var(--surface)}
+.sw span{font:500 12px var(--font-mono);background:var(--surface);color:var(--ink);border-radius:4px;padding:2px 6px}
+.lab{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.lab input{width:100%}
+.formula{font-family:var(--font-mono);font-size:13px;color:var(--ink-2);background:var(--surface-2);border-radius:6px;padding:6px 10px;display:inline-block;margin-top:10px}
+.versions td small{display:block;color:var(--muted);font-size:12.5px}
+.diffbox{margin-top:12px;padding:12px;border:1px dashed var(--axis);border-radius:10px;font-size:14px}
+.std{font-size:12px;font-weight:700;color:var(--accent-ink);background:var(--accent-soft);border-radius:4px;padding:1px 6px;margin-left:4px;white-space:nowrap}
+.price-in{width:110px;text-align:right}
+#tab-formulas,#tab-reform,#tab-qc,#tab-color,#tab-mat{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+.toolbar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:end}
+.toolbar .field{min-width:200px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <a class="back" href="./">← Portfolio</a>
+    <div class="appname"><h1>Paint Formulation Manager</h1><span class="sub">Formula costing, reformulation and QC for water-based paints</span></div>
+  </header>
+  <div class="note"><span><b>Fictional formulas and prices.</b> A simplified recreation of an R&amp;D and QC system I built at work. No real formula, material or price appears here. Changes reset when you reload.</span></div>
+
+  <nav class="tabs" role="tablist" aria-label="Sections" id="tabs">
+    <button type="button" role="tab" data-tab="formulas" aria-selected="true">Formulas</button>
+    <button type="button" role="tab" data-tab="reform" aria-selected="false">Reformulate</button>
+    <button type="button" role="tab" data-tab="qc" aria-selected="false">QC tests</button>
+    <button type="button" role="tab" data-tab="color" aria-selected="false">Color match</button>
+    <button type="button" role="tab" data-tab="mat" aria-selected="false">Raw materials</button>
+  </nav>
+
+  <!-- Formulas -->
+  <section id="tab-formulas" role="tabpanel">
+    <div class="split narrow-left">
+      <div class="card"><div class="card-head"><h2>Formulas</h2><span class="meta">Raw material cost per kg</span></div><div class="flist" id="flist"></div></div>
+      <div class="stack-v">
+        <div class="card">
+          <div class="fhead" id="fhead"></div>
+          <div class="kpis" id="fkpis"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Composition</h2><span class="meta">Parts by weight per 100 kg batch</span></div>
+          <div class="tbl-wrap"><table class="data" id="compTbl"></table></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Where the cost comes from</h2><span class="meta">Raw material cost by category, Rp per kg of paint</span></div>
+          <div class="hbars" id="catBars"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Reformulate -->
+  <section id="tab-reform" role="tabpanel" hidden>
+    <div class="card toolbar">
+      <div class="field"><label for="rForm">Formula</label><select id="rForm"></select></div>
+      <div class="field"><label for="rBase">Start from version</label><select id="rBase"></select></div>
+      <p class="muted" style="font-size:14px;flex:1 1 260px">Change quantities or swap a material for one in the same group. Cost updates as you type; the total must stay at 100 parts.</p>
+    </div>
+    <div class="split">
+      <div class="card">
+        <div class="card-head"><h2>Working formula</h2><span class="meta" id="rMeta"></span></div>
+        <div class="tbl-wrap"><table class="data ed" id="edTbl"></table></div>
+      </div>
+      <div class="stack-v">
+        <div class="card" id="rSummary"></div>
+        <div class="card">
+          <div class="card-head"><h2>Versions</h2><span class="meta">Draft → Submitted → Approved → Standard</span></div>
+          <div class="tbl-wrap"><table class="data versions" id="verTbl"></table></div>
+          <div id="diffBox"></div>
+          <p class="msg" id="verMsg" role="status" style="margin-top:8px"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- QC -->
+  <section id="tab-qc" role="tabpanel" hidden>
+    <div class="split">
+      <div class="card">
+        <div class="card-head"><h2>Record a batch test</h2><span class="meta">Test date 2 Nov 2026</span></div>
+        <div class="form-grid" style="margin-bottom:12px">
+          <div class="field"><label for="qForm">Formula</label><select id="qForm"></select></div>
+          <div class="field"><label for="qLot">Lot number</label><input id="qLot" class="n"></div>
+        </div>
+        <div class="pgrid" id="qInputs"></div>
+        <p class="sec-title" style="font-family:var(--font-mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:16px 0 8px">Result against the standard</p>
+        <div class="tbl-wrap"><table class="data" id="qResult"></table></div>
+        <div id="qRecs" style="margin-top:14px"></div>
+        <div class="btn-row" style="margin-top:14px"><button type="button" class="btn btn-primary" id="qSave">Save to test history</button></div>
+        <p class="msg" id="qMsg" role="status" style="margin-top:8px"></p>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Test history</h2><div class="field" style="min-width:180px"><label for="qParam" class="sr">Parameter</label><select id="qParam"></select></div></div>
+        <div class="legend" id="qLegend"></div>
+        <div class="chart" id="qChart"></div>
+        <div class="tbl-wrap" style="margin-top:14px"><table class="data" id="qHist"></table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Color -->
+  <section id="tab-color" role="tabpanel" hidden>
+    <div class="split even">
+      <div class="card">
+        <div class="card-head"><h2>Sample against the color standard</h2></div>
+        <div class="form-grid" style="margin-bottom:14px">
+          <div class="field"><label for="cForm">Formula</label><select id="cForm"></select></div>
+          <div class="field"><label for="cTol">Tolerance, ΔE*ab</label><input id="cTol" class="n" inputmode="decimal" value="1.0"><span class="hint">Illustrative pass limit</span></div>
+        </div>
+        <p class="field"><span class="lbl">Standard (CIE L*a*b*, D65/10°)</span></p>
+        <p class="mono" id="cStd" style="margin:4px 0 14px;font-size:14.5px"></p>
+        <div class="lab">
+          <div class="field"><label for="cL">Sample L*</label><input id="cL" class="n" inputmode="decimal"><span class="hint">Lightness</span></div>
+          <div class="field"><label for="cA">Sample a*</label><input id="cA" class="n" inputmode="decimal"><span class="hint">− green / + red</span></div>
+          <div class="field"><label for="cB">Sample b*</label><input id="cB" class="n" inputmode="decimal"><span class="hint">− blue / + yellow</span></div>
+        </div>
+        <span class="formula">ΔE*ab = √(ΔL*² + Δa*² + Δb*²)</span>
+      </div>
+      <div class="card" id="cOut"></div>
+    </div>
+  </section>
+
+  <!-- Materials -->
+  <section id="tab-mat" role="tabpanel" hidden>
+    <div class="split">
+      <div class="card">
+        <div class="card-head"><h2>Raw material prices</h2><span class="meta">Rp per kg, fictional. Edit a price to see its effect.</span></div>
+        <div class="tbl-wrap"><table class="data" id="matTbl"></table></div>
+      </div>
+      <div class="stack-v">
+        <div class="card">
+          <div class="card-head"><h2>Effect on formula cost</h2><button type="button" class="btn btn-sm" id="resetPrices">Reset prices</button></div>
+          <div class="tbl-wrap"><table class="data" id="impactTbl"></table></div>
+          <p class="footer-note">In the production system, prices update from the latest purchase records and formulas follow the newest work order for each product.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  const $ = (s, r = document) => r.querySelector(s);
+  const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  const R = rng(905);
+  const rp = v => "Rp " + Math.round(v).toLocaleString("id-ID");
+  const rp2 = v => "Rp " + v.toLocaleString("id-ID", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  const q2 = v => v.toFixed(2);
+  const num = s => { const n = parseFloat(String(s).replace(",", ".")); return isFinite(n) ? n : NaN; };
+  const TODAY_LABEL = "2 Nov 2026";
+
+  // ---------- Fictional raw materials ----------
+  const MAT = [
+    { c: "RM-W01", n: "Water, deionized", cat: "Water", g: "water", p: 120 },
+    { c: "RM-B01", n: "Pure acrylic emulsion", cat: "Binder", g: "binder", p: 28500 },
+    { c: "RM-B02", n: "Styrene-acrylic emulsion", cat: "Binder", g: "binder", p: 21000 },
+    { c: "RM-B03", n: "Vinyl-acrylic emulsion", cat: "Binder", g: "binder", p: 18500 },
+    { c: "RM-P01", n: "Titanium dioxide, rutile", cat: "Pigment", g: "tio2", p: 52000 },
+    { c: "RM-P02", n: "Titanium dioxide, anatase", cat: "Pigment", g: "tio2", p: 41000 },
+    { c: "RM-P03", n: "Yellow iron oxide", cat: "Pigment", g: "yox", p: 24000 },
+    { c: "RM-P04", n: "Red iron oxide", cat: "Pigment", g: "rox", p: 22500 },
+    { c: "RM-P06", n: "Carbon black paste", cat: "Pigment", g: "black", p: 68000 },
+    { c: "RM-E01", n: "Calcium carbonate, 5 µm", cat: "Extender", g: "ext", p: 2300 },
+    { c: "RM-E02", n: "Calcium carbonate, 2 µm", cat: "Extender", g: "ext", p: 3100 },
+    { c: "RM-E03", n: "Calcined kaolin", cat: "Extender", g: "ext", p: 7800 },
+    { c: "RM-E04", n: "Talc", cat: "Extender", g: "ext", p: 6200 },
+    { c: "RM-A01", n: "Polyacrylate dispersant", cat: "Additive", g: "disp", p: 38000 },
+    { c: "RM-A02", n: "Wetting agent", cat: "Additive", g: "wet", p: 45000 },
+    { c: "RM-A03", n: "Mineral-oil defoamer", cat: "Additive", g: "defo", p: 36000 },
+    { c: "RM-A04", n: "Silicone defoamer", cat: "Additive", g: "defo", p: 64000 },
+    { c: "RM-A05", n: "HEC thickener", cat: "Additive", g: "thick", p: 92000 },
+    { c: "RM-A06", n: "Associative thickener (HEUR)", cat: "Additive", g: "thick", p: 78000 },
+    { c: "RM-A07", n: "Amine neutralizer", cat: "Additive", g: "ph", p: 55000 },
+    { c: "RM-A08", n: "In-can biocide", cat: "Additive", g: "bio", p: 60000 },
+    { c: "RM-A09", n: "Ester-alcohol coalescent", cat: "Solvent", g: "solv", p: 33000 },
+    { c: "RM-A10", n: "Propylene glycol", cat: "Solvent", g: "solv", p: 19000 },
+  ];
+  const MB = Object.fromEntries(MAT.map(m => [m.c, m]));
+  const REF = Object.fromEntries(MAT.map(m => [m.c, m.p]));
+  const price = { ...REF };
+  const CATS = ["Binder", "Pigment", "Extender", "Additive", "Solvent", "Water"];
+  const GROUP = { water: "Water", binder: "Binders", tio2: "Titanium dioxide", yox: "Yellow oxide", rox: "Red oxide", black: "Black", ext: "Extenders", disp: "Dispersant", wet: "Wetting", defo: "Defoamers", thick: "Thickeners", ph: "pH control", bio: "Biocide", solv: "Coalescents & glycols" };
+
+  // ---------- Fictional formulas (parts per 100 kg; let-down water balances to 100) ----------
+  const balance = items => { const fixed = items.filter(i => !i.bal).reduce((s, i) => s + i.q, 0); const b = items.find(i => i.bal); if (b) b.q = Math.round((100 - fixed) * 100) / 100; return items; };
+  const mk = arr => balance(arr.map(([s, c, q]) => ({ s, c, q: q ?? 0, bal: q == null })));
+  const clone = items => items.map(i => ({ ...i }));
+  const costKg = (items, p = price) => items.reduce((s, i) => s + i.q * p[i.c], 0) / 100;
+  const totalParts = items => Math.round(items.reduce((s, i) => s + i.q, 0) * 100) / 100;
+  const PARAMS = [
+    { k: "visc", n: "Viscosity", u: "KU", d: 0 }, { k: "dens", n: "Density", u: "kg/L", d: 2 }, { k: "ph", n: "pH", u: "", d: 1 },
+    { k: "fine", n: "Fineness of grind", u: "µm", d: 0 }, { k: "gloss", n: "Gloss 60°", u: "GU", d: 0 }, { k: "cr", n: "Contrast ratio", u: "%", d: 1 },
+  ];
+  const F = [
+    { code: "WB-IM-100", name: "Interior Matt White", line: "Interior", finish: "Matt",
+      items: [["G", "RM-W01", 20], ["G", "RM-A01", 0.5], ["G", "RM-A02", 0.15], ["G", "RM-A03", 0.2], ["G", "RM-A05", 0.45], ["G", "RM-P01", 12], ["G", "RM-E01", 20], ["G", "RM-E03", 6], ["G", "RM-E04", 3],
+        ["L", "RM-B02", 18], ["L", "RM-A09", 0.8], ["L", "RM-A10", 1], ["L", "RM-A03", 0.15], ["L", "RM-A08", 0.15], ["L", "RM-A07", 0.15], ["L", "RM-W01", null]],
+      spec: { visc: [95, 105], dens: [1.38, 1.46], ph: [8.5, 9.5], fine: [null, 50], gloss: [1, 4], cr: [94, null] }, color: { L: 96.2, a: -0.5, b: 2.0 } },
+    { code: "WB-IM-130", name: "Interior Matt Cream", line: "Interior", finish: "Matt",
+      items: [["G", "RM-W01", 20], ["G", "RM-A01", 0.5], ["G", "RM-A02", 0.15], ["G", "RM-A03", 0.2], ["G", "RM-A05", 0.45], ["G", "RM-P01", 10], ["G", "RM-E01", 20], ["G", "RM-E03", 6], ["G", "RM-E04", 3],
+        ["L", "RM-B02", 18], ["L", "RM-A09", 0.8], ["L", "RM-A10", 1], ["L", "RM-A03", 0.15], ["L", "RM-A08", 0.15], ["L", "RM-A07", 0.15], ["L", "RM-P03", 0.6], ["L", "RM-P04", 0.05], ["L", "RM-W01", null]],
+      spec: { visc: [95, 105], dens: [1.37, 1.45], ph: [8.5, 9.5], fine: [null, 50], gloss: [1, 4], cr: [95, null] }, color: { L: 90.4, a: 1.6, b: 13.8 } },
+    { code: "WB-ES-200", name: "Exterior Satin White", line: "Exterior", finish: "Satin",
+      items: [["G", "RM-W01", 14], ["G", "RM-A01", 0.6], ["G", "RM-A02", 0.2], ["G", "RM-A04", 0.2], ["G", "RM-A05", 0.25], ["G", "RM-P01", 21], ["G", "RM-E02", 6],
+        ["L", "RM-B01", 38], ["L", "RM-A06", 0.8], ["L", "RM-A09", 1.6], ["L", "RM-A10", 1.5], ["L", "RM-A04", 0.1], ["L", "RM-A08", 0.15], ["L", "RM-A07", 0.2], ["L", "RM-W01", null]],
+      spec: { visc: [100, 110], dens: [1.28, 1.36], ph: [8.5, 9.5], fine: [null, 25], gloss: [12, 20], cr: [96, null] }, color: { L: 96.8, a: -0.7, b: 1.6 } },
+    { code: "WB-ES-210", name: "Exterior Satin Grey", line: "Exterior", finish: "Satin",
+      items: [["G", "RM-W01", 14], ["G", "RM-A01", 0.6], ["G", "RM-A02", 0.2], ["G", "RM-A04", 0.2], ["G", "RM-A05", 0.25], ["G", "RM-P01", 16], ["G", "RM-E02", 8],
+        ["L", "RM-B01", 38], ["L", "RM-A06", 0.8], ["L", "RM-A09", 1.6], ["L", "RM-A10", 1.5], ["L", "RM-A04", 0.1], ["L", "RM-A08", 0.15], ["L", "RM-A07", 0.2], ["L", "RM-P06", 0.35], ["L", "RM-W01", null]],
+      spec: { visc: [100, 110], dens: [1.27, 1.35], ph: [8.5, 9.5], fine: [null, 25], gloss: [12, 20], cr: [98, null] }, color: { L: 63.0, a: -0.9, b: -1.2 } },
+    { code: "WB-EC-050", name: "Economy Wall White", line: "Interior", finish: "Matt",
+      items: [["G", "RM-W01", 22], ["G", "RM-A01", 0.4], ["G", "RM-A03", 0.25], ["G", "RM-A05", 0.55], ["G", "RM-P02", 6], ["G", "RM-E01", 30], ["G", "RM-E03", 4], ["G", "RM-E04", 5],
+        ["L", "RM-B03", 12], ["L", "RM-A09", 0.5], ["L", "RM-A03", 0.1], ["L", "RM-A08", 0.12], ["L", "RM-A07", 0.12], ["L", "RM-W01", null]],
+      spec: { visc: [90, 102], dens: [1.50, 1.60], ph: [8.5, 9.5], fine: [null, 60], gloss: [0, 3], cr: [90, null] }, color: { L: 94.5, a: -0.3, b: 2.6 } },
+  ].map(f => ({ ...f, versions: [{ v: 1, status: "Approved", date: "14 Mar 2026", by: "R&D", note: "Initial standard", items: mk(f.items) }], std: 1, tests: [] }));
+  // A pending reformulation on the first formula
+  (() => { const f = F[0], it = clone(f.versions[0].items); it[4].q = 0.4; it[5].q = 11.5; it[6].q = 20.5; balance(it);
+    f.versions.push({ v: 2, status: "Submitted", date: "28 Oct 2026", by: "R&D", note: "Lower TiO2 and HEC; more 5 µm carbonate", items: it }); })();
+  const stdItems = f => f.versions.find(v => v.v === f.std).items;
+
+  // seed test history
+  const dec = k => PARAMS.find(p => p.k === k).d;
+  const round = (v, d) => Math.round(v * 10 ** d) / 10 ** d;
+  function sampleVal(spec, k) {
+    const [lo, hi] = spec[k];
+    let v;
+    if (lo != null && hi != null) v = (lo + hi) / 2 + (hi - lo) / 2 * (R() * 2.3 - 1.15);
+    else if (hi != null) v = hi * (0.5 + R() * 0.56);
+    else v = lo + R() * 2.6 - 0.35;
+    return round(v, dec(k));
+  }
+  F.forEach((f, fi) => {
+    for (let i = 0; i < 9; i++) {
+      const res = {}; PARAMS.forEach(p => res[p.k] = sampleVal(f.spec, p.k));
+      f.tests.push({ lot: `LOT-2610-${String(fi * 10 + i + 11).padStart(3, "0")}`, date: `${3 + i * 3} Oct 2026`, v: 1, res });
+    }
+  });
+  const inSpec = (f, k, v) => { const [lo, hi] = f.spec[k]; return (lo == null || v >= lo) && (hi == null || v <= hi); };
+  const specText = (f, k) => { const [lo, hi] = f.spec[k], u = PARAMS.find(p => p.k === k).u, d = dec(k); return lo != null && hi != null ? `${lo.toFixed(d)}–${hi.toFixed(d)} ${u}` : hi != null ? `max ${hi.toFixed(d)} ${u}` : `min ${lo.toFixed(d)} ${u}`; };
+
+  const KB = {
+    visc: { low: "Raise thickener in 0.05-part steps (HEC in the grind or associative thickener in the let-down). Confirm the thickener was fully swollen before let-down.", high: "Hold back part of the let-down water and add it after a viscosity check. Reduce thickener in the next batch." },
+    dens: { low: "Check pigment and extender weighing records and look for entrapped air; add defoamer if foam is visible.", high: "Confirm all let-down water was added and verify the extender charge weight." },
+    ph: { low: "Add amine neutralizer in 0.02-part steps and re-test after 10 minutes of mixing.", high: "Stop further neutralizer additions and re-test after the batch has rested." },
+    fine: { high: "Extend high-speed dispersion and check the dispersant level against the pigment and extender load." },
+    gloss: { low: "Check fineness first. If it is in spec, the extender level is too high for this finish: raise binder or reduce extender.", high: "Add a little matting extender, or check that the binder charge was not exceeded." },
+    cr: { low: "Raise TiO2 or reduce extender, and confirm the drawdown film thickness used for the test." },
+  };
+
+  // ---------- State ----------
+  let fi = 0, tab = "formulas";
+  const state = { work: null, workF: null, baseV: 1, qParam: "visc", compare: null };
+  const forms = F.map((f, i) => ({ v: i, t: `${f.name} · ${f.code}` }));
+  function fillSelect(sel, opts, val) { sel.innerHTML = opts.map(o => `<option value="${esc(o.v)}">${esc(o.t)}</option>`).join(""); if (val != null) sel.value = val; }
+  ["#rForm", "#qForm", "#cForm"].forEach(id => $(id).addEventListener("change", e => { fi = +e.target.value; onFormulaChange(); }));
+  function onFormulaChange() { state.work = null; state.compare = null; prefillQC(); prefillColor(); render(); }
+
+  function setTab(t) {
+    tab = t;
+    document.querySelectorAll("#tabs button").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === t));
+    ["formulas", "reform", "qc", "color", "mat"].forEach(k => $("#tab-" + k).hidden = k !== t);
+    render();
+  }
+  $("#tabs").addEventListener("click", e => { const b = e.target.closest("button"); if (b) setTab(b.dataset.tab); });
+
+  // ---------- Formulas tab ----------
+  function renderFormulas() {
+    $("#flist").innerHTML = F.map((f, i) => `<button type="button" class="fitem" data-i="${i}" aria-pressed="${i === fi}"><b>${esc(f.name)}</b><small>${f.code} · ${f.finish}</small><span class="c">${rp(costKg(stdItems(f)))}/kg</span></button>`).join("");
+    $("#flist").querySelectorAll(".fitem").forEach(b => b.addEventListener("click", () => { fi = +b.dataset.i; onFormulaChange(); }));
+    const f = F[fi], items = stdItems(f), ck = costKg(items);
+    const stdV = f.versions.find(v => v.v === f.std);
+    $("#fhead").innerHTML = `<div><h2>${esc(f.name)}</h2></div><div class="meta"><span class="mono">${f.code}</span><span>${f.line} · ${f.finish} · water-based</span><span class="badge" style="--dot:var(--good)">Standard v${f.std}</span><button type="button" class="btn btn-sm" id="goReform">Reformulate</button></div>`;
+    $("#goReform").addEventListener("click", () => setTab("reform"));
+    $("#fkpis").innerHTML = [
+      ["Raw material cost", `${rp(ck)}`, "per kg of paint"],
+      ["Per 20 kg pail", rp(ck * 20), "raw materials only"],
+      ["Materials", String(new Set(items.map(i => i.c)).size), `${items.length} lines in 2 stages`],
+      ["Total", `${q2(totalParts(items))} parts`, `approved ${stdV.date}`],
+    ].map(([k, v, s]) => `<div class="kpi"><span class="k">${k}</span><span class="v num">${v}</span><span class="s">${s}</span></div>`).join("");
+    const rows = items.map(i => ({ i, m: MB[i.c], cost: i.q * price[i.c] / 100 }));
+    const tot = rows.reduce((s, r) => s + r.cost, 0);
+    const stageRows = (st, title) => `<tr class="group"><td colspan="7">${title}</td></tr>` + rows.filter(r => r.i.s === st).map(r =>
+      `<tr><td class="mono nowrap" style="font-size:12.5px">${r.i.c}</td><td>${esc(r.m.n)}${r.i.bal ? ' <span class="muted" style="font-size:12.5px">(balance)</span>' : ""}</td><td>${r.m.cat}</td><td class="r">${q2(r.i.q)}</td><td class="r">${rp(price[r.i.c])}</td><td class="r">${rp(r.cost * 100)}</td><td class="r">${(r.cost / tot * 100).toFixed(1)}%</td></tr>`).join("");
+    $("#compTbl").innerHTML = `<thead><tr><th>Code</th><th>Material</th><th>Category</th><th class="r">Parts</th><th class="r">Rp/kg</th><th class="r">Rp per 100 kg</th><th class="r">Share</th></tr></thead><tbody>` +
+      stageRows("G", "Grind · high-speed dispersion") + stageRows("L", "Let-down") +
+      `<tr class="total"><td></td><td>Total</td><td></td><td class="r">${q2(totalParts(items))}</td><td></td><td class="r">${rp(tot * 100)}</td><td class="r">100%</td></tr></tbody>`;
+    const byCat = CATS.map(c => ({ c, v: rows.filter(r => r.m.cat === c).reduce((s, r) => s + r.cost, 0) })).filter(x => x.v > 0).sort((a, b) => b.v - a.v);
+    const max = byCat[0].v;
+    $("#catBars").innerHTML = byCat.map(x => `<div class="hbar"><span>${x.c}</span><span class="track" aria-hidden="true"><span style="width:${x.v / max * 100}%"></span></span><span class="val"><b>${rp(x.v)}</b> · ${(x.v / tot * 100).toFixed(0)}%</span></div>`).join("");
+  }
+
+  // ---------- Reformulate tab ----------
+  function ensureWork() {
+    const f = F[fi];
+    if (state.work && state.workF === fi) return;
+    state.workF = fi; state.baseV = f.std; state.work = clone(stdItems(f));
+  }
+  function baseItems() { return F[fi].versions.find(v => v.v === state.baseV).items; }
+  function renderReform() {
+    ensureWork();
+    const f = F[fi];
+    fillSelect($("#rForm"), forms, fi);
+    fillSelect($("#rBase"), f.versions.map(v => ({ v: v.v, t: `v${v.v} · ${v.status}${v.v === f.std ? " · standard" : ""}` })), state.baseV);
+    renderEditor(); renderSummary(); renderVersions();
+  }
+  $("#rBase").addEventListener("change", e => { state.baseV = +e.target.value; state.work = clone(baseItems()); renderEditor(); renderSummary(); });
+  function renderEditor() {
+    const base = baseItems(), w = state.work;
+    $("#rMeta").textContent = `Based on v${state.baseV}`;
+    const row = (it, idx) => {
+      const b = base[idx], changed = b.c !== it.c || Math.abs(b.q - it.q) > 1e-9;
+      const opts = MAT.filter(m => m.g === MB[it.c].g);
+      const sel = opts.length > 1 ? `<select data-i="${idx}" aria-label="Material for line ${idx + 1}">${opts.map(m => `<option value="${m.c}" ${m.c === it.c ? "selected" : ""}>${esc(m.n)}</option>`).join("")}</select>` : esc(MB[it.c].n);
+      return `<tr class="${changed ? "chg" : ""}"><td>${sel}${it.bal ? ' <span class="muted" style="font-size:12.5px">(balance)</span>' : ""}</td>
+        <td><input class="n" type="number" step="0.01" min="0" value="${q2(it.q)}" data-q="${idx}" aria-label="Parts for ${esc(MB[it.c].n)}"></td>
+        <td class="r">${rp(price[it.c])}</td><td class="r" data-cost="${idx}">${rp(it.q * price[it.c])}</td><td data-tag="${idx}">${changed ? '<span class="chgtag">Changed</span>' : ""}</td></tr>`;
+    };
+    const stage = (s, t) => `<tr class="group"><td colspan="5">${t}</td></tr>` + w.map((it, idx) => it.s === s ? row(it, idx) : "").join("");
+    $("#edTbl").innerHTML = `<thead><tr><th>Material</th><th>Parts</th><th class="r">Rp/kg</th><th class="r">Rp per 100 kg</th><th></th></tr></thead><tbody>${stage("G", "Grind")}${stage("L", "Let-down")}</tbody>`;
+    $("#edTbl").querySelectorAll("select[data-i]").forEach(s => s.addEventListener("change", () => { w[+s.dataset.i].c = s.value; renderEditor(); renderSummary(); }));
+    $("#edTbl").querySelectorAll("input[data-q]").forEach(inp => inp.addEventListener("input", () => {
+      const i = +inp.dataset.q, v = num(inp.value); if (isNaN(v) || v < 0) return;
+      w[i].q = v;
+      const b = base[i], changed = b.c !== w[i].c || Math.abs(b.q - v) > 1e-9;
+      inp.closest("tr").classList.toggle("chg", changed);
+      $(`[data-cost="${i}"]`).textContent = rp(v * price[w[i].c]);
+      $(`[data-tag="${i}"]`).innerHTML = changed ? '<span class="chgtag">Changed</span>' : "";
+      renderSummary();
+    }));
+  }
+  function diffList(from, to) {
+    const out = [];
+    to.forEach((it, i) => {
+      const b = from[i];
+      if (b.c !== it.c) out.push(`${MB[b.c].n} → ${MB[it.c].n} (${q2(b.q)} → ${q2(it.q)} parts)`);
+      else if (Math.abs(b.q - it.q) > 1e-9) out.push(`${MB[it.c].n}${it.bal ? " (balance)" : ""}: ${q2(b.q)} → ${q2(it.q)} parts`);
+    });
+    return out;
+  }
+  function deltaHtml(d, base, unit) {
+    if (Math.abs(d) < 0.5) return `<span class="delta">No change</span>`;
+    const down = d < 0;
+    return `<span class="delta ${down ? "down" : "up"}">${down ? "▼" : "▲"} ${rp(Math.abs(d))}${unit} (${down ? "−" : "+"}${(Math.abs(d) / base * 100).toFixed(1)}%) ${down ? "cheaper" : "more expensive"}</span>`;
+  }
+  function renderSummary() {
+    const w = state.work, base = baseItems(), f = F[fi];
+    const tot = totalParts(w), ok = Math.abs(tot - 100) < 0.005;
+    const nc = costKg(w), bc = costKg(base), sc = costKg(stdItems(f));
+    const changes = diffList(base, w);
+    $("#rSummary").innerHTML = `<div class="card-head"><h2>New cost</h2><span class="meta">Raw materials, current prices</span></div>
+      <div class="big num">${rp(nc)}<span style="font:500 15px var(--font-body);color:var(--muted)"> per kg</span></div>
+      <p style="margin:4px 0 10px;font-size:14.5px">${deltaHtml(nc - bc, bc, "/kg")} <span class="muted">vs v${state.baseV}</span></p>
+      <div class="sumrow"><span class="k">Per 20 kg pail</span><span class="num">${rp(nc * 20)} <span class="muted">(${(nc - bc) * 20 >= 0 ? "+" : "−"}${rp(Math.abs(nc - bc) * 20)})</span></span></div>
+      <div class="sumrow"><span class="k">Against the current standard v${f.std}</span><span class="num">${rp(sc)}/kg</span></div>
+      <div class="sumrow"><span class="k">Total parts</span><span>${ok ? `<span class="pill good"><i aria-hidden="true">✓</i>${q2(tot)}</span>` : `<span class="pill warn"><i aria-hidden="true">!</i>${q2(tot)}, must be 100.00</span> <button type="button" class="btn btn-sm" id="balBtn">Balance with let-down water</button>`}</span></div>
+      <p class="sec-title" style="font-family:var(--font-mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 0 4px">Changes (${changes.length})</p>
+      ${changes.length ? `<ul class="changes">${changes.map(c => `<li>${esc(c)}</li>`).join("")}</ul>` : '<p class="muted" style="font-size:14px">No changes yet. Edit a quantity or swap a material.</p>'}
+      <div class="field" style="margin-top:12px"><label for="rNote">Reason for the change</label><textarea id="rNote" placeholder="e.g. reduce cost while keeping contrast ratio in spec"></textarea></div>
+      <div class="btn-row" style="margin-top:10px"><button type="button" class="btn btn-primary" id="saveVer" ${ok && changes.length ? "" : "disabled"}>Save as v${f.versions.length + 1} draft</button><button type="button" class="btn" id="resetWork">Discard changes</button></div>`;
+    const bal = $("#balBtn"); if (bal) bal.addEventListener("click", () => { balance(w); renderEditor(); renderSummary(); });
+    $("#resetWork").addEventListener("click", () => { state.work = clone(base); renderEditor(); renderSummary(); });
+    $("#saveVer").addEventListener("click", () => {
+      const note = $("#rNote").value.trim() || "Reformulation";
+      const v = f.versions.length + 1;
+      f.versions.push({ v, status: "Draft", date: TODAY_LABEL, by: "You", note, items: clone(w) });
+      state.baseV = v; state.work = clone(w);
+      $("#verMsg").textContent = `Saved v${v} as a draft. Submit it for approval in the versions table.`;
+      renderReform();
+    });
+  }
+  function renderVersions() {
+    const f = F[fi];
+    $("#verTbl").innerHTML = `<thead><tr><th>Version</th><th>Status</th><th class="r">Rp/kg</th><th>Note</th><th></th></tr></thead><tbody>` +
+      f.versions.slice().reverse().map(v => {
+        const dot = { Draft: "var(--axis)", Submitted: "var(--s1)", Approved: "var(--good)", Rejected: "var(--crit)" }[v.status];
+        const acts = [];
+        if (v.status === "Draft") acts.push(["submit", "Submit"]);
+        if (v.status === "Submitted") acts.push(["approve", "Approve"], ["reject", "Reject"]);
+        if (v.status === "Approved" && v.v !== f.std) acts.push(["standard", "Set as standard"]);
+        if (v.v !== f.std) acts.push(["compare", "Compare"]);
+        return `<tr><td class="nowrap"><b>v${v.v}</b>${v.v === f.std ? '<span class="std">Standard</span>' : ""}<small>${v.date} · ${esc(v.by)}</small></td>
+          <td><span class="badge" style="--dot:${dot}">${v.status}</span></td><td class="r nowrap">${rp(costKg(v.items))}</td><td>${esc(v.note)}</td>
+          <td><div class="btn-row">${acts.map(([a, l]) => `<button type="button" class="btn btn-sm" data-a="${a}" data-v="${v.v}">${l}</button>`).join("")}</div></td></tr>`;
+      }).join("") + "</tbody>";
+    $("#verTbl").querySelectorAll("button[data-a]").forEach(b => b.addEventListener("click", () => {
+      const v = f.versions.find(x => x.v === +b.dataset.v), a = b.dataset.a;
+      if (a === "submit") { v.status = "Submitted"; $("#verMsg").textContent = `v${v.v} submitted for approval.`; }
+      if (a === "approve") { v.status = "Approved"; $("#verMsg").textContent = `v${v.v} approved. Set it as the standard to make it the production formula.`; }
+      if (a === "reject") { v.status = "Rejected"; $("#verMsg").textContent = `v${v.v} rejected.`; }
+      if (a === "standard") { f.std = v.v; state.compare = null; $("#verMsg").textContent = `v${v.v} is now the standard for ${f.name}. Its cost shows on the Formulas tab.`; }
+      if (a === "compare") state.compare = state.compare === v.v ? null : v.v;
+      renderReform();
+    }));
+    const box = $("#diffBox");
+    if (state.compare) {
+      const v = f.versions.find(x => x.v === state.compare), d = diffList(stdItems(f), v.items), c1 = costKg(stdItems(f)), c2 = costKg(v.items);
+      box.innerHTML = `<div class="diffbox"><b>v${v.v} compared with standard v${f.std}</b><p style="margin:4px 0">${deltaHtml(c2 - c1, c1, "/kg")}</p>${d.length ? `<ul class="changes">${d.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : "<p>Same composition.</p>"}</div>`;
+    } else box.innerHTML = "";
+  }
+
+  // ---------- QC tab ----------
+  let qcLotSeq = 1;
+  function prefillQC() {
+    const f = F[fi];
+    $("#qLot").value = `LOT-2611-${String(qcLotSeq).padStart(3, "0")}`;
+    $("#qInputs").innerHTML = PARAMS.map(p => {
+      const [lo, hi] = f.spec[p.k];
+      let v = lo != null && hi != null ? (lo + hi) / 2 : hi != null ? hi * 0.7 : lo + 1;
+      if (p.k === "visc") v = lo - 6;
+      return `<div class="field"><label for="q-${p.k}">${p.n}${p.u ? ", " + p.u : ""}</label><input id="q-${p.k}" class="n" inputmode="decimal" value="${round(v, p.d).toFixed(p.d)}"><span class="hint">Spec ${specText(f, p.k)}</span></div>`;
+    }).join("");
+    $("#qInputs").querySelectorAll("input").forEach(i => i.addEventListener("input", renderQCResult));
+  }
+  function readQC() { const r = {}; PARAMS.forEach(p => r[p.k] = num($("#q-" + p.k).value)); return r; }
+  function renderQCResult() {
+    const f = F[fi], r = readQC();
+    const rows = PARAMS.map(p => {
+      const v = r[p.k];
+      if (isNaN(v)) return { p, v, verdict: "missing" };
+      const [lo, hi] = f.spec[p.k];
+      return { p, v, verdict: lo != null && v < lo ? "low" : hi != null && v > hi ? "high" : "ok" };
+    });
+    $("#qResult").innerHTML = `<thead><tr><th>Parameter</th><th class="r">Result</th><th>Spec</th><th>Verdict</th></tr></thead><tbody>` + rows.map(x => `<tr><td>${x.p.n}</td><td class="r">${isNaN(x.v) ? "–" : x.v.toFixed(x.p.d)}</td><td class="nowrap">${specText(f, x.p.k)}</td>
+      <td>${x.verdict === "ok" ? '<span class="pill good"><i aria-hidden="true">✓</i>In spec</span>' : x.verdict === "missing" ? '<span class="pill info"><i aria-hidden="true">–</i>Enter a value</span>' : `<span class="pill crit"><i aria-hidden="true">✕</i>${x.verdict === "low" ? "Below spec" : "Above spec"}</span>`}</td></tr>`).join("") + "</tbody>";
+    const fails = rows.filter(x => x.verdict === "low" || x.verdict === "high");
+    $("#qRecs").innerHTML = fails.length ? `<div class="card-head" style="margin-bottom:6px"><h2 style="font-size:16px">Suggested adjustments</h2></div><ul class="recs">${fails.map(x => `<li><b>${x.p.n} ${x.verdict === "low" ? "too low" : "too high"}.</b> ${esc((KB[x.p.k] || {})[x.verdict] || "Re-test to confirm, then review the batch record.")}</li>`).join("")}</ul>`
+      : `<p style="font-size:14.5px"><span class="pill good"><i aria-hidden="true">✓</i>All parameters in spec. The batch can be released.</span></p>`;
+    $("#qSave").disabled = rows.some(x => x.verdict === "missing");
+  }
+  $("#qSave").addEventListener("click", () => {
+    const f = F[fi], r = readQC(), lot = $("#qLot").value.trim() || "LOT-2611-" + String(qcLotSeq).padStart(3, "0");
+    f.tests.push({ lot, date: TODAY_LABEL, v: f.std, res: r });
+    const n = PARAMS.filter(p => !inSpec(f, p.k, r[p.k])).length;
+    $("#qMsg").textContent = `${lot} saved to the history of ${f.name}${n ? `, with ${n} parameter${n > 1 ? "s" : ""} out of spec` : ", all in spec"}.`;
+    qcLotSeq++; $("#qLot").value = `LOT-2611-${String(qcLotSeq).padStart(3, "0")}`;
+    renderQCHistory();
+  });
+  fillSelect($("#qParam"), PARAMS.map(p => ({ v: p.k, t: p.n })), "visc");
+  $("#qParam").addEventListener("change", e => { state.qParam = e.target.value; renderQCHistory(); });
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const sv = (tag, a = {}) => { const e = document.createElementNS(SVGNS, tag); for (const k in a) e.setAttribute(k, a[k]); return e; };
+  const tip = document.createElement("div"); tip.className = "tip"; tip.hidden = true;
+  function niceStep(raw) { const p = Math.pow(10, Math.floor(Math.log10(raw))), n = raw / p; return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * p; }
+  function renderQCHistory() {
+    const f = F[fi], k = state.qParam, P = PARAMS.find(p => p.k === k), [lo, hi] = f.spec[k];
+    const tests = f.tests.slice(-10);
+    $("#qLegend").innerHTML = `<span><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="4.5" fill="var(--s1)"/></svg>In spec</span><span><svg width="12" height="12" aria-hidden="true"><rect x="2" y="2" width="8" height="8" transform="rotate(45 6 6)" fill="var(--crit)"/></svg>Out of spec</span><span><i class="lg-box" style="background:var(--band)"></i>Spec range</span>`;
+    const box = $("#qChart"), W = Math.max(260, box.clientWidth), H = 230, narrow = W < 460;
+    const m = { l: 44, r: 54, t: 12, b: 44 };
+    const vals = tests.map(t => t.res[k]);
+    let lo2 = Math.min(...vals, lo ?? Infinity), hi2 = Math.max(...vals, hi ?? -Infinity);
+    if (lo == null) lo2 = Math.min(lo2, hi2 * 0.4 || 0);
+    const pad = (hi2 - lo2) * 0.18 || 1; lo2 -= pad; hi2 += pad;
+    const step = niceStep((hi2 - lo2) / 4), y0 = Math.floor(lo2 / step) * step, y1 = Math.ceil(hi2 / step) * step;
+    const x = i => m.l + (i + 0.5) * (W - m.l - m.r) / tests.length, y = v => m.t + (1 - (v - y0) / (y1 - y0)) * (H - m.t - m.b);
+    const svg = sv("svg", { viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: "img", "aria-label": `${P.n} for the last ${tests.length} lots of ${f.name}, spec ${specText(f, k)}` });
+    const bTop = y(hi != null ? hi : y1), bBot = y(lo != null ? lo : y0);
+    svg.appendChild(sv("rect", { x: m.l, y: bTop, width: W - m.l - m.r, height: Math.max(0, bBot - bTop), fill: "var(--band)" }));
+    for (let v = y0; v <= y1 + 1e-9; v += step) {
+      svg.appendChild(sv("line", { class: "grid", x1: m.l, x2: W - m.r, y1: y(v), y2: y(v) }));
+      const t = sv("text", { class: "tick-lbl", x: m.l - 6, y: y(v) + 4, "text-anchor": "end" }); t.textContent = round(v, Math.max(P.d, step < 1 ? 1 : 0)); svg.appendChild(t);
+    }
+    [[lo, "Min"], [hi, "Max"]].forEach(([v, l]) => { if (v == null) return;
+      svg.appendChild(sv("line", { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v), stroke: "var(--ink-2)", "stroke-width": 1, "stroke-dasharray": "4 4" }));
+      const t = sv("text", { class: "lbl-2", x: W - m.r + 6, y: y(v) + 4 }); t.textContent = `${l} ${v.toFixed(P.d)}`; svg.appendChild(t); });
+    svg.appendChild(sv("path", { d: tests.map((t, i) => (i ? "L" : "M") + x(i) + " " + y(t.res[k])).join(" "), fill: "none", stroke: "var(--s1)", "stroke-width": 1.5, opacity: .55 }));
+    tests.forEach((t, i) => {
+      const v = t.res[k], ok = inSpec(f, k, v);
+      const g = ok ? sv("circle", { cx: x(i), cy: y(v), r: 5, fill: "var(--s1)", stroke: "var(--surface)", "stroke-width": 2 })
+        : sv("rect", { x: x(i) - 5, y: y(v) - 5, width: 10, height: 10, transform: `rotate(45 ${x(i)} ${y(v)})`, fill: "var(--crit)", stroke: "var(--surface)", "stroke-width": 2 });
+      svg.appendChild(g);
+      if (!narrow || i % 2 === 0) { const lt = sv("text", { class: "tick-lbl", x: x(i), y: H - m.b + 16, "text-anchor": "middle" }); lt.textContent = t.lot.slice(-3); svg.appendChild(lt); }
+      const hit = sv("rect", { class: "hit", x: x(i) - (W - m.l - m.r) / tests.length / 2, y: m.t, width: (W - m.l - m.r) / tests.length, height: H - m.t - m.b });
+      const show = () => { tip.innerHTML = `<b>${t.lot}</b><div class="row"><span>${t.date}</span><span>v${t.v}</span></div><div class="row"><span>${P.n}</span><span class="num">${v.toFixed(P.d)} ${P.u}</span></div><div class="row"><span>${ok ? "In spec" : "Out of spec"}</span><span>${specText(f, k)}</span></div>`; tip.hidden = false;
+        const tw = tip.offsetWidth; let left = x(i) + 12; if (left + tw > W) left = x(i) - tw - 12; tip.style.left = Math.max(0, left) + "px"; tip.style.top = Math.max(0, y(v) - 40) + "px"; };
+      hit.addEventListener("mouseenter", show); hit.addEventListener("click", show); svg.appendChild(hit);
+    });
+    const xl = sv("text", { class: "tick-lbl", x: m.l, y: H - 4 }); xl.textContent = "Lot number (last 3 digits), oldest to newest"; svg.appendChild(xl);
+    svg.addEventListener("mouseleave", () => tip.hidden = true);
+    box.innerHTML = ""; box.appendChild(svg); box.appendChild(tip);
+    $("#qHist").innerHTML = `<thead><tr><th>Lot</th><th>Date</th><th class="r">${P.n}</th><th>All parameters</th></tr></thead><tbody>` +
+      f.tests.slice().reverse().slice(0, 8).map(t => { const n = PARAMS.filter(p => !inSpec(f, p.k, t.res[p.k])).length; const v = t.res[k];
+        return `<tr><td class="mono nowrap" style="font-size:12.5px">${t.lot}</td><td class="nowrap">${t.date}</td><td class="r">${v.toFixed(P.d)}</td><td>${n ? `<span class="pill crit"><i aria-hidden="true">✕</i>${n} out of spec</span>` : '<span class="pill good"><i aria-hidden="true">✓</i>All in spec</span>'}</td></tr>`; }).join("") + "</tbody>";
+  }
+  function renderQC() { fillSelect($("#qForm"), forms, fi); renderQCResult(); renderQCHistory(); }
+
+  // ---------- Color tab ----------
+  function labToRgb(L, a, b) {
+    const fy = (L + 16) / 116, fx = fy + a / 500, fz = fy - b / 200, e = 216 / 24389, k = 24389 / 27;
+    const xr = fx ** 3 > e ? fx ** 3 : (116 * fx - 16) / k, yr = L > k * e ? fy ** 3 : L / k, zr = fz ** 3 > e ? fz ** 3 : (116 * fz - 16) / k;
+    const X = xr * 0.95047, Y = yr, Z = zr * 1.08883;
+    const lin = [3.2404542 * X - 1.5371385 * Y - 0.4985314 * Z, -0.9692660 * X + 1.8760108 * Y + 0.0415560 * Z, 0.0556434 * X - 0.2040259 * Y + 1.0572252 * Z];
+    const g = c => Math.round(Math.max(0, Math.min(1, c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055)) * 255);
+    return `rgb(${lin.map(g).join(",")})`;
+  }
+  function prefillColor() {
+    const c = F[fi].color;
+    $("#cL").value = (c.L - 0.35).toFixed(2); $("#cA").value = (c.a + 0.15).toFixed(2); $("#cB").value = (c.b + 0.95).toFixed(2);
+  }
+  ["#cL", "#cA", "#cB", "#cTol"].forEach(id => $(id).addEventListener("input", renderColorOut));
+  function renderColor() { fillSelect($("#cForm"), forms, fi); const c = F[fi].color; $("#cStd").textContent = `L* ${c.L.toFixed(2)}   a* ${c.a.toFixed(2)}   b* ${c.b.toFixed(2)}`; renderColorOut(); }
+  function renderColorOut() {
+    const f = F[fi], s = f.color, L = num($("#cL").value), a = num($("#cA").value), b = num($("#cB").value), tol = num($("#cTol").value);
+    const box = $("#cOut");
+    if ([L, a, b, tol].some(isNaN)) { box.innerHTML = '<p class="muted">Enter the sample L*, a* and b* values and a tolerance.</p>'; return; }
+    const dL = L - s.L, da = a - s.a, db = b - s.b, dE = Math.sqrt(dL * dL + da * da + db * db), ok = dE <= tol;
+    const word = (d, pos, neg) => Math.abs(d) < 0.3 ? "Close to standard" : d > 0 ? pos : neg;
+    const guide = [];
+    if (dL <= -0.3) guide.push("Sample is darker: reduce the black or colored paste slightly, or add white base.");
+    if (dL >= 0.3) guide.push("Sample is lighter: add a small amount of the main tinting paste.");
+    if (db >= 0.3) guide.push("Sample is yellower: reduce yellow oxide, or add a trace of blue.");
+    if (db <= -0.3) guide.push("Sample is bluer: add a trace of yellow oxide.");
+    if (da >= 0.3) guide.push("Sample is redder: reduce red oxide, or add a trace of green.");
+    if (da <= -0.3) guide.push("Sample is greener: add a trace of red oxide.");
+    box.innerHTML = `<div class="card-head"><h2>Result</h2>${ok ? '<span class="pill good"><i aria-hidden="true">✓</i>Within tolerance</span>' : '<span class="pill crit"><i aria-hidden="true">✕</i>Outside tolerance</span>'}</div>
+      <div class="big num">ΔE*ab ${dE.toFixed(2)}</div><p class="muted" style="font-size:14px">Tolerance ${tol.toFixed(2)}</p>
+      <div class="swatches" role="img" aria-label="Standard and sample color swatches side by side"><div class="sw" style="background:${labToRgb(s.L, s.a, s.b)}"><span>Standard</span></div><div class="sw" style="background:${labToRgb(L, a, b)}"><span>Sample</span></div></div>
+      <div class="tbl-wrap"><table class="data"><thead><tr><th>Axis</th><th class="r">Difference</th><th>Meaning</th></tr></thead><tbody>
+        <tr><td>ΔL*</td><td class="r">${dL >= 0 ? "+" : ""}${dL.toFixed(2)}</td><td>${word(dL, "Lighter", "Darker")}</td></tr>
+        <tr><td>Δa*</td><td class="r">${da >= 0 ? "+" : ""}${da.toFixed(2)}</td><td>${word(da, "Redder", "Greener")}</td></tr>
+        <tr><td>Δb*</td><td class="r">${db >= 0 ? "+" : ""}${db.toFixed(2)}</td><td>${word(db, "Yellower", "Bluer")}</td></tr>
+      </tbody></table></div>
+      ${guide.length ? `<p style="margin:14px 0 6px;font-weight:700">Shading direction</p><ul class="recs">${guide.map(g => `<li>${g}</li>`).join("")}</ul>` : ""}
+      <p class="footer-note">Swatches are computed from L*a*b* values and are approximate on screen. A spectrophotometer reading is the reference.</p>`;
+  }
+
+  // ---------- Materials tab ----------
+  function renderMat() {
+    const used = c => F.filter(f => stdItems(f).some(i => i.c === c)).length;
+    $("#matTbl").innerHTML = `<thead><tr><th>Code</th><th>Material</th><th>Group</th><th class="r">Used in</th><th class="r">Rp/kg</th></tr></thead><tbody>` +
+      CATS.map(cat => `<tr class="group"><td colspan="5">${cat}</td></tr>` + MAT.filter(m => m.cat === cat).map(m => `<tr><td class="mono nowrap" style="font-size:12.5px">${m.c}</td><td>${esc(m.n)}</td><td>${GROUP[m.g]}</td><td class="r">${used(m.c)}</td>
+        <td class="r"><input class="n price-in" inputmode="numeric" value="${price[m.c].toLocaleString("id-ID")}" data-c="${m.c}" aria-label="Price of ${esc(m.n)}"></td></tr>`).join("")).join("") + "</tbody>";
+    $("#matTbl").querySelectorAll("input[data-c]").forEach(i => {
+      i.addEventListener("input", () => { const v = Number(i.value.replace(/[^\d]/g, "")); if (v > 0) { price[i.dataset.c] = v; renderImpact(); } });
+      i.addEventListener("blur", () => { i.value = price[i.dataset.c].toLocaleString("id-ID"); });
+    });
+    renderImpact();
+  }
+  function renderImpact() {
+    $("#impactTbl").innerHTML = `<thead><tr><th>Formula</th><th class="r">At reference prices</th><th class="r">Now</th><th>Change</th></tr></thead><tbody>` +
+      F.map(f => { const a = costKg(stdItems(f), REF), b = costKg(stdItems(f)); return `<tr><td>${esc(f.name)}<br><span class="mono muted" style="font-size:12px">${f.code}</span></td><td class="r">${rp(a)}</td><td class="r">${rp(b)}</td><td>${deltaHtml(b - a, a, "/kg")}</td></tr>`; }).join("") + "</tbody>";
+  }
+  $("#resetPrices").addEventListener("click", () => { Object.assign(price, REF); renderMat(); });
+
+  function render() {
+    if (tab === "formulas") renderFormulas();
+    if (tab === "reform") renderReform();
+    if (tab === "qc") renderQC();
+    if (tab === "color") renderColor();
+    if (tab === "mat") renderMat();
+  }
+  prefillQC(); prefillColor(); render();
+  let rt; new ResizeObserver(() => { clearTimeout(rt); rt = setTimeout(() => { if (tab === "qc") renderQCHistory(); }, 80); }).observe($("#qChart"));
+})();
+</script>
+</body>
+</html>

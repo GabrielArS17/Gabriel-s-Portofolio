@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Control Tower Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,500..800&family=IBM+Plex+Mono:wght@400;500&family=Source+Sans+3:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="assets/demo.css">
+<style>
+.scope{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px}
+.scope h2{font-size:28px;font-weight:760;font-stretch:112%;color:var(--navy)}
+.scope .who{font-size:15px;color:var(--ink-2)}
+.scope .period{font-size:13.5px;color:var(--muted);margin-left:auto}
+.kpi .st{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;font-size:13px;color:var(--ink-2);margin-top:2px}
+.mc{display:inline-flex;align-items:center;gap:6px;justify-content:flex-end}
+.mc .pill{gap:0}
+.team td.name{min-width:120px}
+.team td.name .linkbtn{white-space:nowrap}
+.team td.name small{display:block;color:var(--muted);font-size:12.5px}
+.esc td small{display:block;color:var(--muted);font-size:12.5px}
+.esc .resp{font-size:12.5px;color:var(--ink-2);display:block;margin-top:2px}
+.leafnote{font-size:14.5px;color:var(--ink-2)}
+#tab-overview,#tab-esc{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <a class="back" href="./">← Portfolio</a>
+    <div class="appname"><h1>Control Tower</h1><span class="sub">Sales control dashboard · October 2026</span></div>
+    <div class="rolebox"><label for="role">View as</label><select id="role"></select></div>
+  </header>
+  <div class="note"><span><b>Fictional data.</b> A simplified recreation of a dashboard I built at work. Switch the role to see how each level gets its own scope.</span></div>
+
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button type="button" role="tab" id="t-overview" aria-selected="true" aria-controls="tab-overview">Overview</button>
+    <button type="button" role="tab" id="t-esc" aria-selected="false" aria-controls="tab-esc">Escalations <span class="count" id="escCount">0</span></button>
+  </nav>
+
+  <div class="crumbs" id="crumbs" aria-label="Hierarchy"></div>
+  <div class="scope" id="scope"></div>
+
+  <section id="tab-overview" role="tabpanel" aria-labelledby="t-overview">
+    <div class="kpis" id="kpis"></div>
+    <div class="card">
+      <div class="card-head"><h2>Cumulative sales invoiced, Rp million</h2><span class="meta">Working day 20 of 26</span></div>
+      <div class="legend">
+        <span><i class="lg-line" style="border-color:var(--s1)"></i>Actual</span>
+        <span><i class="lg-line" style="border-color:var(--ink-2);border-top-style:dashed"></i>Target pace</span>
+        <span><i class="lg-line" style="border-color:var(--s2);border-top-style:dashed"></i>Run-rate projection</span>
+      </div>
+      <div class="chart" id="cumChart"></div>
+    </div>
+    <div class="card" id="teamCard">
+      <div class="card-head"><h2 id="teamTitle">Team</h2><span class="meta">Sorted by sales pace, lowest first. Select a name to drill down.</span></div>
+      <div class="tbl-wrap"><table class="data team" id="teamTbl"></table></div>
+    </div>
+  </section>
+
+  <section id="tab-esc" role="tabpanel" aria-labelledby="t-esc" hidden>
+    <div class="card">
+      <div class="card-head"><h2>Escalations in this scope</h2>
+        <div class="seg" role="group" aria-label="Filter escalations" id="escSeg">
+          <button type="button" data-f="open" aria-pressed="true">Open</button>
+          <button type="button" data-f="all" aria-pressed="false">All</button>
+        </div>
+      </div>
+      <p class="muted" style="margin-bottom:12px;font-size:14px">A metric below 85% of pace raises an escalation to the next level up. Thresholds here are illustrative.</p>
+      <div class="tbl-wrap"><table class="data esc" id="escTbl"></table></div>
+      <p class="msg" id="escMsg" role="status" style="margin-top:8px"></p>
+    </div>
+  </section>
+
+  <p class="footer-note">Status rules: on track at 100% of pace or more, watch from 85%, behind below 85%. Pace = target × working days elapsed ÷ working days in the month.</p>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  const $ = (s, r = document) => r.querySelector(s);
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  const R = rng(1031);
+  const WD = 26, DONE = 20, PACE = DONE / WD;
+  const money = v => v >= 1000 ? "Rp " + (v / 1000).toFixed(2) + " bn" : "Rp " + Math.round(v).toLocaleString("en-US") + " mn";
+  const pct = (v, d = 0) => (v * 100).toFixed(d) + "%";
+  const int = v => Math.round(v).toLocaleString("en-US");
+  const ST = { good: ["good", "✓", "On track"], warn: ["warn", "!", "Watch"], crit: ["crit", "↓", "Behind"] };
+  const st = r => r >= 1 ? "good" : r >= 0.85 ? "warn" : "crit";
+  const pill = (s, label) => `<span class="pill ${ST[s][0]}"><i aria-hidden="true">${ST[s][1]}</i>${label ?? ST[s][2]}</span>`;
+  const icon = s => `<span class="pill ${ST[s][0]}"><i aria-hidden="true">${ST[s][1]}</i><span class="sr">${ST[s][2]}</span></span>`;
+
+  // ---------- Build a fictional sales organisation ----------
+  const regions = [
+    { rsm: "Rina", region: "West region", areas: [{ asm: "Dewi", area: "Medan" }, { asm: "Agus", area: "Palembang" }] },
+    { rsm: "Hendra", region: "East region", areas: [{ asm: "Lina", area: "Surabaya" }, { asm: "Fajar", area: "Makassar" }] },
+  ];
+  const spvNames = ["Yoga", "Sinta", "Bayu", "Maya", "Rizky", "Tari", "Joko", "Nia"];
+  const salesNames = ["Andi", "Budi", "Citra", "Dimas", "Eka", "Fani", "Gilang", "Hana", "Indra", "Jihan", "Kevin", "Laras", "Made", "Nanda", "Oki", "Putri", "Raka", "Salsa", "Teguh", "Umi", "Vino", "Wulan", "Yusuf", "Zahra"];
+  const KEYS = ["si", "siT", "cr", "crT", "so", "reg", "act", "vPlan", "vis", "noo", "nooT"];
+  function leaf(name, area) {
+    const siT = Math.round(180 + R() * 240), f = 0.62 + R() * 0.6;
+    const daily = Array.from({ length: DONE }, () => siT / WD * f * (0.55 + R() * 0.9));
+    const si = daily.reduce((a, b) => a + b, 0);
+    const crT = Math.round(siT * 0.9), cr = crT * PACE * (0.6 + R() * 0.6);
+    const reg = Math.round(60 + R() * 80), act = Math.round(reg * (0.38 + R() * 0.36));
+    const vPlan = Math.round(110 + R() * 20), vis = Math.round(vPlan * (0.72 + R() * 0.33));
+    return { name, role: "Salesman", label: area, si, siT, cr, crT, so: si * (1.04 + R() * 0.2), reg, act, vPlan, vis, noo: Math.floor(R() * 5), nooT: 3, daily };
+  }
+  const root = { name: "National", role: "Management", label: "All regions", children: [] };
+  let si = 0, pi = 0;
+  regions.forEach(rg => {
+    const r = { name: rg.rsm, role: "RSM", label: rg.region, children: [] };
+    rg.areas.forEach(ar => {
+      const a = { name: ar.asm, role: "ASM", label: "Area " + ar.area, children: [] };
+      for (let k = 0; k < 2; k++) {
+        const s = { name: spvNames[pi++], role: "SPV", label: ar.area + " team " + (k + 1), children: [] };
+        for (let j = 0; j < 3; j++) s.children.push(leaf(salesNames[si++], ar.area));
+        a.children.push(s);
+      }
+      r.children.push(a);
+    });
+    root.children.push(r);
+  });
+  (function agg(n) {
+    if (!n.children) return;
+    n.children.forEach(c => { c.parent = n; agg(c); });
+    KEYS.forEach(k => n[k] = n.children.reduce((s, c) => s + c[k], 0));
+    n.daily = Array.from({ length: DONE }, (_, d) => n.children.reduce((s, c) => s + c.daily[d], 0));
+  })(root);
+  const M = n => {
+    const cov = n.act / n.reg;
+    return { siPace: n.si / (n.siT * PACE), crPace: n.cr / (n.crT * PACE), cov, covR: cov / 0.6, visR: n.vis / n.vPlan, nooR: n.noo / (n.nooT * PACE) };
+  };
+  const worst = (...s) => s.includes("crit") ? "crit" : s.includes("warn") ? "warn" : "good";
+  const within = (n, scope) => { for (let x = n; x; x = x.parent) if (x === scope) return true; return false; };
+
+  // ---------- Escalations ----------
+  const responses = ["Joint visit with the SPV planned for this week.", "Overdue invoices assigned for collection follow-up.", "Route plan revised; two outlets added to Friday visits.", "Agreed a recovery target for the last six working days."];
+  const escs = [];
+  let eid = 1;
+  function raise(subject, metric, value, to, threshold) {
+    const responded = R() < 0.35;
+    escs.push({ id: eid++, subject, metric, value, to, days: 1 + Math.floor(R() * 6), status: responded ? "Responded" : "Open", note: responded ? responses[Math.floor(R() * responses.length)] : "", threshold });
+  }
+  (function walk(n) {
+    if (n.children) n.children.forEach(walk);
+    if (!n.parent) return;
+    const m = M(n), lim = n.role === "Salesman" ? 0.85 : 0.9;
+    if (m.siPace < lim) raise(n, "Sales invoiced", pct(m.siPace) + " of pace", n.parent);
+    if (n.role === "Salesman" && m.crPace < 0.85) raise(n, "Cash receipts", pct(m.crPace) + " of pace", n.parent);
+    if (n.role === "Salesman" && m.visR < 0.85) raise(n, "Visits", pct(m.visR) + " of plan", n.parent);
+  })(root);
+
+  // ---------- Roles ----------
+  const R0 = root.children[0], A0 = R0.children[0], S0 = A0.children[0];
+  const roles = [
+    { label: "Management · National", node: root },
+    { label: "RSM · Rina (West)", node: R0 },
+    { label: "RSM · Hendra (East)", node: root.children[1] },
+    { label: "ASM · Dewi (Medan)", node: A0 },
+    { label: "SPV · " + S0.name + " (Medan)", node: S0 },
+    { label: "Salesman · " + S0.children[0].name + " (Medan)", node: S0.children[0] },
+  ];
+  const roleSel = $("#role");
+  roles.forEach((r, i) => roleSel.appendChild(new Option(r.label, i)));
+  let path = [root], escFilter = "open", tab = "overview";
+  roleSel.addEventListener("change", () => { path = [roles[+roleSel.value].node]; render(); });
+
+  // ---------- Tabs ----------
+  function setTab(t) {
+    tab = t;
+    $("#t-overview").setAttribute("aria-selected", t === "overview");
+    $("#t-esc").setAttribute("aria-selected", t === "esc");
+    $("#tab-overview").hidden = t !== "overview";
+    $("#tab-esc").hidden = t !== "esc";
+    if (t === "overview") drawChart();
+  }
+  $("#t-overview").addEventListener("click", () => setTab("overview"));
+  $("#t-esc").addEventListener("click", () => setTab("esc"));
+  $("#escSeg").addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    escFilter = b.dataset.f;
+    $("#escSeg").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b));
+    renderEsc();
+  });
+
+  // ---------- Render ----------
+  const scopeNode = () => path[path.length - 1];
+  function render() {
+    const n = scopeNode();
+    const cr = $("#crumbs"); cr.innerHTML = ""; cr.hidden = path.length < 2;
+    path.forEach((p, i) => {
+      if (i) cr.insertAdjacentHTML("beforeend", '<span class="sep" aria-hidden="true">›</span>');
+      if (i < path.length - 1) {
+        const b = document.createElement("button"); b.type = "button"; b.textContent = p.name;
+        b.onclick = () => { path = path.slice(0, i + 1); render(); };
+        cr.appendChild(b);
+      } else cr.insertAdjacentHTML("beforeend", `<span class="here">${esc(p.name)}</span>`);
+    });
+    $("#scope").innerHTML = `<h2>${esc(n.name)}</h2><span class="who">${esc(n.role)} · ${esc(n.label)}</span><span class="period">Target pace today: ${pct(PACE, 1)} of the monthly target</span>`;
+    renderKpis(n); drawChart(); renderTeam(n); renderEsc();
+  }
+
+  function renderKpis(n) {
+    const m = M(n);
+    const tiles = [
+      { k: "Sales invoiced (SI)", v: money(n.si), s: `${pct(n.si / n.siT)} of ${money(n.siT)} target`, fill: n.si / n.siT, mark: PACE, st: pill(st(m.siPace)), t: `${pct(m.siPace)} of pace` },
+      { k: "Cash receipts (CR)", v: money(n.cr), s: `${pct(n.cr / n.crT)} of ${money(n.crT)} target`, fill: n.cr / n.crT, mark: PACE, st: pill(st(m.crPace)), t: `${pct(m.crPace)} of pace` },
+      { k: "Sales orders (SO)", v: money(n.so), s: `${money(n.so - n.si)} ordered, not yet invoiced`, fill: n.si / n.so, mark: null, st: "", t: `${pct(n.si / n.so)} of orders invoiced` },
+      { k: "Active outlets", v: int(n.act), s: `${pct(m.cov)} of ${int(n.reg)} registered outlets`, fill: m.cov, mark: 0.6, st: pill(st(m.covR)), t: "Target 60% coverage" },
+      { k: "Visits", v: int(n.vis), s: `${pct(m.visR)} of ${int(n.vPlan)} planned to date`, fill: m.visR, mark: 1, st: pill(st(m.visR)), t: "Plan to date" },
+      { k: "New outlets (NOO)", v: int(n.noo), s: `${int(n.noo)} of ${int(n.nooT)} this month`, fill: n.noo / n.nooT, mark: PACE, st: pill(st(m.nooR)), t: `${pct(m.nooR)} of pace` },
+    ];
+    $("#kpis").innerHTML = tiles.map(t => `<div class="kpi"><span class="k">${t.k}</span><span class="v num">${t.v}</span><span class="s num">${t.s}</span>
+      <span class="bar" aria-hidden="true"><span class="fill" style="width:${Math.min(t.fill, 1) * 100}%"></span>${t.mark != null ? `<span class="mark" style="left:calc(${t.mark * 100}% - 1px)"></span>` : ""}</span>
+      <span class="st">${t.st}<span class="num">${t.t}</span></span></div>`).join("");
+  }
+
+  // cumulative chart
+  const tip = document.createElement("div"); tip.className = "tip"; tip.hidden = true;
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const sv = (tag, a = {}) => { const e = document.createElementNS(SVGNS, tag); for (const k in a) e.setAttribute(k, a[k]); return e; };
+  function niceStep(raw) { const p = Math.pow(10, Math.floor(Math.log10(raw))), n = raw / p; return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * p; }
+  function drawChart() {
+    const box = $("#cumChart"); if (!box || box.offsetParent === null) return;
+    const n = scopeNode();
+    const W = Math.max(280, box.clientWidth), H = W < 520 ? 230 : 280, narrow = W < 520;
+    const m = { l: 52, r: narrow ? 14 : 112, t: 14, b: 34 };
+    const cum = []; n.daily.reduce((s, v, i) => (cum[i] = s + v), 0);
+    const rate = cum[DONE - 1] / DONE, proj = cum[DONE - 1] + rate * (WD - DONE);
+    const top = Math.max(n.siT, proj) * 1.05, step = niceStep(top / 4), ticks = Math.ceil(top / step), yMax = ticks * step;
+    const x = d => m.l + d / WD * (W - m.l - m.r), y = v => m.t + (1 - v / yMax) * (H - m.t - m.b);
+    const svg = sv("svg", { viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: "img", "aria-label": `Cumulative sales invoiced for ${n.name}: ${money(cum[DONE - 1])} by day 20 against a target of ${money(n.siT)}; run-rate projection ${money(proj)}.` });
+    for (let k = 0; k <= ticks; k++) {
+      const v = k * step;
+      svg.appendChild(sv("line", { class: k ? "grid" : "base", x1: m.l, x2: W - m.r, y1: y(v), y2: y(v) }));
+      const t = sv("text", { class: "tick-lbl", x: m.l - 6, y: y(v) + 4, "text-anchor": "end" }); t.textContent = int(v); svg.appendChild(t);
+    }
+    [1, 5, 10, 15, 20, 26].forEach(d => { const t = sv("text", { class: "tick-lbl", x: x(d), y: H - m.b + 16, "text-anchor": "middle" }); t.textContent = d; svg.appendChild(t); });
+    const t0 = sv("text", { class: "tick-lbl", x: W - m.r, y: H - 2, "text-anchor": "end" }); t0.textContent = "working day"; svg.appendChild(t0);
+    const P = pts => pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
+    svg.appendChild(sv("path", { d: P([[x(0), y(0)], [x(WD), y(n.siT)]]), fill: "none", stroke: "var(--ink-2)", "stroke-width": 1.5, "stroke-dasharray": "5 5" }));
+    svg.appendChild(sv("path", { d: P([[x(DONE), y(cum[DONE - 1])], [x(WD), y(proj)]]), fill: "none", stroke: "var(--s2)", "stroke-width": 2, "stroke-dasharray": "5 5", "stroke-linecap": "round" }));
+    svg.appendChild(sv("path", { d: P([[x(0), y(0)]].concat(cum.map((v, i) => [x(i + 1), y(v)]))), fill: "none", stroke: "var(--s1)", "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }));
+    svg.appendChild(sv("circle", { cx: x(DONE), cy: y(cum[DONE - 1]), r: 4.5, fill: "var(--s1)", stroke: "var(--surface)", "stroke-width": 2 }));
+    svg.appendChild(sv("circle", { cx: x(WD), cy: y(proj), r: 4.5, fill: "var(--s2)", stroke: "var(--surface)", "stroke-width": 2 }));
+    if (!narrow) {
+      const close = Math.abs(y(proj) - y(n.siT)) < 30;
+      const above = proj > n.siT;
+      const ly = (v, up) => y(v) + (close ? (up ? -6 : 18) : 4);
+      [["Target", n.siT, !above], ["Projection", proj, above]].forEach(([name, v, up]) => {
+        const a = sv("text", { class: "lbl", x: x(WD) + 10, y: ly(v, up) - 7 }); a.textContent = name; svg.appendChild(a);
+        const b = sv("text", { class: "lbl-2", x: x(WD) + 10, y: ly(v, up) + 7 }); b.textContent = money(v); svg.appendChild(b);
+      });
+    }
+    const xh = sv("line", { class: "xhair", y1: m.t, y2: H - m.b, x1: -9, x2: -9, visibility: "hidden" }); svg.appendChild(xh);
+    const stepW = (W - m.l - m.r) / WD;
+    for (let d = 1; d <= WD; d++) {
+      const h = sv("rect", { class: "hit", x: x(d) - stepW / 2, y: m.t, width: stepW, height: H - m.t - m.b });
+      const show = () => {
+        xh.setAttribute("x1", x(d)); xh.setAttribute("x2", x(d)); xh.setAttribute("visibility", "visible");
+        let rows = "";
+        if (d <= DONE) rows += `<div class="row"><span>Actual</span><span class="num">${money(cum[d - 1])}</span></div>`;
+        rows += `<div class="row"><span>Target pace</span><span class="num">${money(n.siT * d / WD)}</span></div>`;
+        if (d >= DONE) rows += `<div class="row"><span>Projection</span><span class="num">${money(cum[DONE - 1] + rate * (d - DONE))}</span></div>`;
+        tip.innerHTML = `<b>Working day ${d}</b>${rows}`; tip.hidden = false;
+        const tw = tip.offsetWidth; let left = x(d) + 12; if (left + tw > W) left = x(d) - tw - 12;
+        tip.style.left = Math.max(0, left) + "px"; tip.style.top = m.t + "px";
+      };
+      h.addEventListener("mouseenter", show); h.addEventListener("click", show);
+      svg.appendChild(h);
+    }
+    svg.addEventListener("mouseleave", () => { tip.hidden = true; xh.setAttribute("visibility", "hidden"); });
+    box.innerHTML = ""; box.appendChild(svg); box.appendChild(tip);
+  }
+
+  function renderTeam(n) {
+    const card = $("#teamCard"), tbl = $("#teamTbl");
+    if (!n.children) {
+      card.querySelector(".card-head .meta").textContent = "";
+      $("#teamTitle").textContent = "No team below this level";
+      tbl.innerHTML = `<tbody><tr><td class="leafnote">${esc(n.name)} is a salesman, the lowest level in the hierarchy. Escalations raised for ${esc(n.name)} appear in the Escalations tab.</td></tr></tbody>`;
+      return;
+    }
+    const lvl = n.children[0].role;
+    $("#teamTitle").textContent = { RSM: "Regions", ASM: "Areas", SPV: "Supervisor teams", Salesman: "Salesmen" }[lvl];
+    card.querySelector(".card-head .meta").textContent = "Sorted by sales pace, lowest first. Select a name to drill down.";
+    const rows = n.children.map(c => ({ c, m: M(c) })).sort((a, b) => a.m.siPace - b.m.siPace);
+    tbl.innerHTML = `<thead><tr><th>${lvl}</th><th class="r">Sales vs pace</th><th class="r">Cash vs pace</th><th class="r">Coverage</th><th class="r">Visits</th><th class="r">NOO</th><th>Status</th></tr></thead><tbody>` +
+      rows.map(({ c, m }, i) => `<tr class="click" data-i="${n.children.indexOf(c)}"><td class="name"><button type="button" class="linkbtn" data-i="${n.children.indexOf(c)}">${esc(c.name)} ›</button><small>${esc(c.label)}</small></td>
+        <td class="r"><span class="mc">${icon(st(m.siPace))}<span class="num">${pct(m.siPace)}</span></span></td>
+        <td class="r"><span class="mc">${icon(st(m.crPace))}<span class="num">${pct(m.crPace)}</span></span></td>
+        <td class="r"><span class="mc">${icon(st(m.covR))}<span class="num">${pct(m.cov)}</span></span></td>
+        <td class="r"><span class="mc">${icon(st(m.visR))}<span class="num">${pct(m.visR)}</span></span></td>
+        <td class="r"><span class="mc">${icon(st(m.nooR))}<span class="num">${int(c.noo)}/${int(c.nooT)}</span></span></td>
+        <td>${pill(worst(st(m.siPace), st(m.crPace)))}</td></tr>`).join("") + "</tbody>";
+    tbl.querySelectorAll("tr.click").forEach(tr => tr.addEventListener("click", () => { path.push(n.children[+tr.dataset.i]); render(); }));
+  }
+
+  function renderEsc() {
+    const n = scopeNode();
+    const inScope = escs.filter(e => within(e.subject, n));
+    const open = inScope.filter(e => e.status === "Open");
+    $("#escCount").textContent = open.length;
+    const list = (escFilter === "open" ? open : inScope).slice().sort((a, b) => b.days - a.days);
+    const tbl = $("#escTbl");
+    if (!list.length) { tbl.innerHTML = `<tbody><tr><td>No ${escFilter === "open" ? "open " : ""}escalations in this scope.</td></tr></tbody>`; return; }
+    tbl.innerHTML = `<thead><tr><th>Open for</th><th>About</th><th>Issue</th><th>Escalated to</th><th>Status</th><th></th></tr></thead><tbody>` +
+      list.map(e => `<tr><td class="nowrap num">${e.days} day${e.days > 1 ? "s" : ""}</td>
+        <td><b>${esc(e.subject.name)}</b><small>${esc(e.subject.role)} · ${esc(e.subject.label)}</small></td>
+        <td>${esc(e.metric)}<small class="num">${esc(e.value)}</small></td>
+        <td>${esc(e.to.name)}<small>${esc(e.to.role)}</small></td>
+        <td>${e.status === "Open" ? '<span class="badge" style="--dot:var(--warn)">Open</span>' : '<span class="badge" style="--dot:var(--good)">Responded</span>'}${e.note ? `<span class="resp">${esc(e.note)}</span>` : ""}</td>
+        <td>${e.status === "Open" ? `<button type="button" class="btn btn-sm" data-id="${e.id}">Record follow-up</button>` : ""}</td></tr>`).join("") + "</tbody>";
+    tbl.querySelectorAll("button[data-id]").forEach(b => b.addEventListener("click", () => {
+      const e = escs.find(x => x.id === +b.dataset.id);
+      const viewer = roles[+roleSel.value].node;
+      e.status = "Responded"; e.note = `Follow-up recorded by ${viewer.name} (${viewer.role}).`;
+      $("#escMsg").textContent = `Follow-up recorded for ${e.subject.name}.`;
+      renderEsc();
+    }));
+  }
+
+  render();
+  let rt; new ResizeObserver(() => { clearTimeout(rt); rt = setTimeout(drawChart, 60); }).observe($("#cumChart"));
+})();
+</script>
+</body>
+</html>

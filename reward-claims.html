@@ -1,0 +1,542 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Reward Claims Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,500..800&family=IBM+Plex+Mono:wght@400;500&family=Source+Sans+3:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="assets/demo.css">
+<style>
+.pipeline{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.chip{font:600 13.5px var(--font-body);display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--surface);color:var(--ink-2);border-radius:999px;padding:5px 11px;cursor:pointer}
+.chip b{font-family:var(--font-mono);font-weight:500;color:var(--ink)}
+.chip[aria-pressed="true"]{border-color:var(--navy);color:var(--ink);background:var(--sel)}
+.chip.you{border-color:var(--accent);color:var(--accent-ink);background:var(--accent-soft)}
+.chip.you b{color:var(--accent-ink)}
+.chip.you[aria-pressed="true"]{box-shadow:inset 0 0 0 1px var(--accent)}
+.filters{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-bottom:10px;font-size:14px}
+.claims td small{display:block;color:var(--muted);font-size:12.5px}
+.claims td.cust{min-width:150px}
+.sla{display:inline-flex;gap:6px;align-items:center;white-space:nowrap}
+.detail-empty{color:var(--muted);font-size:14.5px;padding:24px 4px}
+.sec-title{font-family:var(--font-mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:16px 0 8px}
+.att{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:14px}
+.att li{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
+.att .fn{font-family:var(--font-mono);font-size:13px;color:var(--ink-2);overflow-wrap:anywhere}
+.att .opt{font-size:12.5px;color:var(--muted)}
+.actions .msg:empty{display:none}
+.actions{display:grid;gap:8px;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2)}
+.history{list-style:none;margin:0;padding:0 0 0 14px;border-left:2px solid var(--line);display:grid;gap:12px}
+.history li{position:relative;font-size:14px}
+.history li::before{content:"";position:absolute;left:-20px;top:6px;width:10px;height:10px;border-radius:50%;background:var(--surface);border:2px solid var(--axis)}
+.history li:last-child::before{border-color:var(--accent);background:var(--accent)}
+.history .when{font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+.history .by{color:var(--ink-2)}
+.history q{display:block;margin-top:2px;color:var(--ink-2);quotes:none;font-style:italic}
+/* Reward realization document */
+.doc{background:var(--paper);border:1px solid var(--axis);border-radius:4px;padding:20px;margin-top:10px;font-size:14px}
+.doc-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;border-bottom:2px solid var(--ink);padding-bottom:10px;margin-bottom:12px}
+.doc-title{font-family:var(--font-display);font-weight:780;font-stretch:115%;font-size:19px;letter-spacing:.04em;color:var(--ink)}
+.doc-no{font-family:var(--font-mono);font-size:13px;color:var(--ink-2)}
+.doc-meta{text-align:right;font-size:13px;color:var(--ink-2)}
+.doc-tbl{width:100%;border-collapse:collapse}
+.doc-tbl th{text-align:left;font-weight:600;color:var(--ink-2);padding:4px 10px 4px 0;width:38%;vertical-align:top}
+.doc-tbl td{padding:4px 0;font-weight:600;overflow-wrap:anywhere}
+.sigs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:18px;text-align:center}
+.sig{display:grid;gap:4px;font-size:13px;min-width:0}
+.sig .role{color:var(--ink-2);font-weight:600}
+.sig .space{height:48px;display:grid;place-items:center;font-family:var(--font-mono);font-size:11px;color:var(--good-ink);line-height:1.3}
+.sig .space.pending{color:var(--muted)}
+.sig .name{border-top:1px solid var(--ink);padding-top:4px;font-weight:700;overflow-wrap:anywhere}
+@media (max-width:560px){.sigs{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:16px}}
+.attach-row{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px}
+.attach-row:last-child{border-bottom:0}
+.attach-row .what{min-width:150px;font-weight:600;flex:1 1 150px}
+.req{font-size:12px;font-weight:700;color:var(--accent-ink);background:var(--accent-soft);border-radius:4px;padding:0 5px}
+#tab-claims,#tab-new,#tab-programs,#tab-audit{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+.audit td small{display:block;color:var(--muted);font-size:12.5px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <a class="back" href="./">← Portfolio</a>
+    <div class="appname"><h1>Reward Claims</h1><span class="sub">Invoice-deduction reward approvals</span></div>
+    <div class="rolebox"><label for="role">Signed in as</label><select id="role"></select><span class="whoami" id="whoami"></span></div>
+  </header>
+  <div class="note"><span><b>Fictional data.</b> A simplified recreation of an approval system I built at work. Switch the role to act as each user. Changes reset when you reload.</span></div>
+
+  <nav class="tabs" role="tablist" aria-label="Sections" id="tabs">
+    <button type="button" role="tab" data-tab="claims" aria-selected="true">Claims <span class="count" id="youCount">0</span></button>
+    <button type="button" role="tab" data-tab="new" aria-selected="false" id="tabNewBtn">New claim</button>
+    <button type="button" role="tab" data-tab="programs" aria-selected="false">Programs</button>
+    <button type="button" role="tab" data-tab="audit" aria-selected="false" id="tabAuditBtn">Audit log</button>
+  </nav>
+
+  <section id="tab-claims" role="tabpanel">
+    <div class="split">
+      <div class="card">
+        <div class="card-head"><h2>Claims</h2><span class="meta" id="scopeMeta"></span></div>
+        <div class="pipeline" id="pipeline" role="group" aria-label="Filter by stage"></div>
+        <div class="tbl-wrap"><table class="data claims" id="claimsTbl"></table></div>
+      </div>
+      <div class="card" id="detail"><p class="detail-empty">Select a claim to see its details, attachments, history and the actions available to you.</p></div>
+    </div>
+  </section>
+
+  <section id="tab-new" role="tabpanel" hidden>
+    <div class="split">
+      <div class="card">
+        <div class="card-head"><h2 id="formTitle">New claim</h2><span class="meta" id="formMeta">The form opens with an example. Its invoice is already claimed, so the duplicate check fails until you change the number.</span></div>
+        <form id="claimForm" autocomplete="off" novalidate>
+          <div class="form-grid">
+            <div class="field" id="depotField"><label for="fDepot">Depot</label><select id="fDepot"></select></div>
+            <div class="field"><label for="fSales">Salesman</label><select id="fSales"></select></div>
+            <div class="field"><label for="fCust">Customer</label><select id="fCust"></select></div>
+            <div class="field"><label for="fProg">Program</label><select id="fProg"></select></div>
+            <div class="field"><label for="fInv">Invoice number</label><input id="fInv" class="n"></div>
+            <div class="field"><label for="fInvAmt">Invoice total, Rp</label><input id="fInvAmt" class="n" inputmode="numeric"></div>
+            <div class="field"><label for="fPaid">Invoice paid in full on</label><input id="fPaid" type="date"><span class="hint">Required before submitting</span></div>
+            <div class="field"><label for="fReward">Reward amount, Rp</label><input id="fReward" class="n" inputmode="numeric"></div>
+            <div class="field"><label for="fType">Reward given as</label><select id="fType"><option>Invoice deduction</option><option>Bank transfer</option></select></div>
+          </div>
+          <div class="form-grid" id="bankFields" style="margin-top:12px">
+            <div class="field"><label for="fBank">Bank</label><input id="fBank"></div>
+            <div class="field"><label for="fAcc">Account number</label><input id="fAcc" class="n" inputmode="numeric"></div>
+            <div class="field"><label for="fHolder">Account holder</label><input id="fHolder"></div>
+          </div>
+          <p class="sec-title">Attachments</p>
+          <div id="attachList"></div>
+          <div class="btn-row" style="margin-top:14px">
+            <button type="submit" class="btn btn-primary" id="submitBtn">Submit for review</button>
+            <button type="button" class="btn" id="draftBtn">Save draft</button>
+            <button type="button" class="btn" id="clearBtn">Clear form</button>
+          </div>
+          <div id="formErrors" class="errors" style="margin-top:12px" hidden></div>
+          <p class="msg" id="formMsg" role="status" style="margin-top:8px"></p>
+        </form>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Checks before submitting</h2></div>
+        <ul class="checks" id="liveChecks"></ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-programs" role="tabpanel" hidden>
+    <div class="card">
+      <div class="card-head"><h2>Reward programs</h2><span class="meta">Regular programs set a minimum purchase and a reward cap. Tonnage programs take the reward entered on each claim.</span></div>
+      <div class="tbl-wrap"><table class="data" id="progTbl"></table></div>
+      <p class="msg" id="progMsg" role="status" style="margin-top:8px"></p>
+    </div>
+  </section>
+
+  <section id="tab-audit" role="tabpanel" hidden>
+    <div class="card">
+      <div class="card-head"><h2>Audit log</h2><span class="meta">Every status change, newest first</span></div>
+      <div class="tbl-wrap"><table class="data audit" id="auditTbl"></table></div>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  const $ = (s, r = document) => r.querySelector(s);
+  const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const DAY = 864e5;
+  const TODAY = new Date(Date.UTC(2026, 10, 2, 9, 0));
+  const fDate = d => d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+  const fDT = d => fDate(d) + ", " + d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
+  const rp = v => "Rp " + Math.round(v).toLocaleString("id-ID");
+  const parseRp = s => Number(String(s).replace(/[^\d]/g, "")) || 0;
+  let clock = 0;
+  const now = () => new Date(TODAY.getTime() + (++clock) * 6 * 60000);
+
+  const DEPOTS = { MDN: "Medan", PLG: "Palembang", SBY: "Surabaya", MKS: "Makassar" };
+  const DEPOT_ADMIN = { MDN: "Putra", PLG: "Wati", SBY: "Sari", MKS: "Ilham" };
+  const SALES = { MDN: ["Andi", "Budi"], PLG: ["Citra", "Dimas"], SBY: ["Eka", "Gilang", "Hana"], MKS: ["Indra", "Jihan"] };
+  const CUST = { MDN: ["TB Maju Bersama", "TB Sinar Baru"], PLG: ["Toko Cat Pelangi", "TB Karya Mandiri"], SBY: ["TB Sumber Rejeki", "Toko Bangunan Abadi", "TB Mitra Usaha"], MKS: ["TB Harapan Jaya", "Toko Cat Warna Indah"] };
+  const ROLES = [
+    { key: "depot", name: "Sari", title: "Depot Admin", depot: "SBY" },
+    { key: "ho", name: "Bima", title: "Head Office Admin" },
+    { key: "fin", name: "Ratna", title: "Finance Manager" },
+    { key: "sup", name: "Yudi", title: "Super Admin" },
+  ];
+  const programs = [
+    { code: "RG-01", name: "Quarterly loyalty reward", type: "Regular", min: 25e6, max: 1.5e6, active: true },
+    { code: "RG-02", name: "Pail bundle reward", type: "Regular", min: 10e6, max: 750e3, active: true },
+    { code: "RG-03", name: "New outlet welcome", type: "Regular", min: 5e6, max: 300e3, active: true },
+    { code: "TN-01", name: "Exterior tonnage, 20 kg tier", type: "Tonnage", active: true },
+    { code: "TN-02", name: "Primer tonnage, 5 kg tier", type: "Tonnage", active: false },
+  ];
+  const prog = code => programs.find(p => p.code === code);
+  const SLA = { "Submitted": 1, "Resubmitted": 1, "Under review": 2, "Waiting finance approval": 2, "Approved": 1, "Processing payment": 3, "Paid": 3 };
+  const WAIT = { depot: ["Draft", "Revision required", "Paid"], ho: ["Submitted", "Resubmitted", "Under review", "Approved", "Processing payment"], fin: ["Waiting finance approval"], sup: [] };
+  const DOT = { "Draft": "var(--axis)", "Revision required": "var(--warn)", "Rejected": "var(--crit)", "Approved": "var(--good)", "Paid": "var(--good)", "Completed": "var(--good)" };
+  const badge = s => `<span class="badge" style="--dot:${DOT[s] || "var(--s1)"}">${esc(s)}</span>`;
+  const STAGES = [
+    { name: "Draft", s: ["Draft"] }, { name: "In review", s: ["Submitted", "Resubmitted", "Under review"] },
+    { name: "Revision", s: ["Revision required"] }, { name: "Finance approval", s: ["Waiting finance approval"] },
+    { name: "Payment", s: ["Approved", "Processing payment"] }, { name: "Paid", s: ["Paid"] },
+    { name: "Completed", s: ["Completed"] }, { name: "Rejected", s: ["Rejected"] },
+  ];
+
+  // ---------- Seed claims ----------
+  const seq = {};
+  const claimNo = (depot, date) => { const ym = String(date.getUTCFullYear()).slice(2) + String(date.getUTCMonth() + 1).padStart(2, "0"); const k = depot + ym; seq[k] = (seq[k] || 0) + 1; return `RC-${depot}-${ym}-${String(seq[k]).padStart(3, "0")}`; };
+  const ago = (d, h) => new Date(TODAY.getTime() - d * DAY - (9 - h) * 3600e3);
+  const actor = (role, depot) => role === "depot" ? { name: DEPOT_ADMIN[depot], title: "Depot Admin" } : { ho: { name: "Bima", title: "Head Office Admin" }, fin: { name: "Ratna", title: "Finance Manager" } }[role];
+  const claims = [];
+  function seed(o, steps) {
+    const created = ago(steps[0][0], 8);
+    const c = Object.assign({ no: claimNo(o.depot, created), created, att: {}, history: [], sign: null, createdBy: DEPOT_ADMIN[o.depot] }, o);
+    steps.forEach(([d, action, role, status, note], i) => {
+      const a = actor(role, o.depot);
+      const at = ago(d, 8 + i);
+      c.history.push({ at, action, by: a.name, title: a.title, note: note || "" });
+      c.status = status;
+      if (action === "Approved and signed") c.sign = { name: a.name, at };
+    });
+    claims.push(c);
+  }
+  const full = { mou: "MoU_signed.pdf", pay: "Payment_proof.pdf", inv: "Invoice_copy.pdf" };
+  seed({ depot: "MDN", sales: "Budi", cust: "TB Sinar Baru", prog: "TN-01", inv: "SI-2610-00401", invAmt: 40500000, paid: "2026-10-03", reward: 1800000, type: "Bank transfer", bank: "BRI", acc: "0021 0100 5566 302", holder: "Sutrisno", att: { ...full, hand: "Handover_photo.jpg" } },
+    [[24, "Submitted", "depot", "Submitted"], [23, "Started review", "ho", "Under review"], [22, "Forwarded to finance", "ho", "Waiting finance approval"], [21, "Approved and signed", "fin", "Approved"], [20, "Started payment", "ho", "Processing payment"], [18, "Marked as paid", "ho", "Paid", "Transfer ref. TRF-77810"], [16, "Completed with handover photo", "depot", "Completed"]]);
+  seed({ depot: "PLG", sales: "Citra", cust: "Toko Cat Pelangi", prog: "RG-02", inv: "SI-2610-00356", invAmt: 9800000, paid: "2026-10-12", reward: 500000, type: "Invoice deduction", att: { mou: full.mou, pay: full.pay } },
+    [[12, "Submitted", "depot", "Submitted"], [11, "Started review", "ho", "Under review"], [6, "Rejected", "ho", "Rejected", "This customer already received the pail bundle reward this quarter."]]);
+  seed({ depot: "SBY", sales: "Eka", cust: "TB Sumber Rejeki", prog: "RG-01", inv: "SI-2610-00412", invAmt: 32500000, paid: "2026-10-20", reward: 1250000, type: "Bank transfer", bank: "BCA", acc: "1230 4455 67", holder: "Hartono", att: { ...full } },
+    [[9, "Submitted", "depot", "Submitted"], [7, "Started review", "ho", "Under review"], [2, "Forwarded to finance", "ho", "Waiting finance approval", "Invoice settled in full; reward is within the program cap."]]);
+  seed({ depot: "PLG", sales: "Dimas", cust: "TB Karya Mandiri", prog: "RG-01", inv: "SI-2610-00360", invAmt: 26000000, paid: "2026-10-18", reward: 1000000, type: "Invoice deduction", att: { ...full } },
+    [[8, "Submitted", "depot", "Submitted"], [7, "Started review", "ho", "Under review"], [4, "Forwarded to finance", "ho", "Waiting finance approval"], [1, "Approved and signed", "fin", "Approved"]]);
+  seed({ depot: "MKS", sales: "Indra", cust: "TB Harapan Jaya", prog: "TN-01", inv: "SI-2610-00420", invAmt: 52000000, paid: "2026-10-16", reward: 2500000, type: "Bank transfer", bank: "Mandiri", acc: "1520 0098 7711", holder: "Hj. Rahmah", att: { ...full } },
+    [[11, "Submitted", "depot", "Submitted"], [10, "Started review", "ho", "Under review"], [8, "Forwarded to finance", "ho", "Waiting finance approval"], [6, "Approved and signed", "fin", "Approved"], [2, "Started payment", "ho", "Processing payment"]]);
+  seed({ depot: "SBY", sales: "Hana", cust: "TB Mitra Usaha", prog: "TN-01", inv: "SI-2610-00502", invAmt: 45000000, paid: "2026-10-22", reward: 2000000, type: "Bank transfer", bank: "BNI", acc: "0388 1200 45", holder: "Wijaya", att: { ...full } },
+    [[10, "Submitted", "depot", "Submitted"], [9, "Started review", "ho", "Under review"], [8, "Forwarded to finance", "ho", "Waiting finance approval"], [7, "Approved and signed", "fin", "Approved"], [6, "Started payment", "ho", "Processing payment"], [3, "Marked as paid", "ho", "Paid", "Transfer ref. TRF-78102"]]);
+  seed({ depot: "MKS", sales: "Jihan", cust: "Toko Cat Warna Indah", prog: "RG-02", inv: "SI-2610-00433", invAmt: 14000000, paid: "2026-10-24", reward: 700000, type: "Invoice deduction", att: { mou: full.mou, pay: full.pay } },
+    [[5, "Submitted", "depot", "Submitted"], [3, "Started review", "ho", "Under review"]]);
+  seed({ depot: "MDN", sales: "Andi", cust: "TB Maju Bersama", prog: "RG-01", inv: "SI-2610-00388", invAmt: 28000000, paid: "2026-10-26", reward: 1500000, type: "Invoice deduction", att: { ...full } },
+    [[4, "Submitted", "depot", "Submitted"]]);
+  seed({ depot: "SBY", sales: "Gilang", cust: "Toko Bangunan Abadi", prog: "RG-02", inv: "SI-2610-00477", invAmt: 12800000, paid: "2026-10-25", reward: 600000, type: "Invoice deduction", att: { mou: "MoU_unsigned.pdf", pay: full.pay } },
+    [[5, "Submitted", "depot", "Submitted"], [4, "Started review", "ho", "Under review"], [1, "Requested revision", "ho", "Revision required", "The MoU copy is unsigned. Please attach the signed MoU."]]);
+  seed({ depot: "SBY", sales: "Hana", cust: "Toko Bangunan Abadi", prog: "RG-01", inv: "SI-2610-00489", invAmt: 30000000, paid: "2026-10-29", reward: 1200000, type: "Invoice deduction", att: { ...full } },
+    [[0, "Submitted", "depot", "Submitted"]]);
+  seed({ depot: "SBY", sales: "Eka", cust: "TB Sumber Rejeki", prog: "RG-03", inv: "SI-2610-00530", invAmt: 6200000, paid: "", reward: 250000, type: "Invoice deduction", att: { mou: full.mou } },
+    [[1, "Saved draft", "depot", "Draft"]]);
+
+  // ---------- State ----------
+  let role = ROLES[0], stageFilter = "you", selected = null, editing = null;
+  const roleSel = $("#role");
+  ROLES.forEach((r, i) => roleSel.appendChild(new Option(`${r.name} · ${r.title}`, i)));
+  const visible = () => claims.filter(c => role.key !== "depot" || c.depot === role.depot);
+  const waiting = c => WAIT[role.key].includes(c.status);
+  const daysIn = c => Math.max(0, Math.floor((TODAY - c.history[c.history.length - 1].at) / DAY));
+  const overSla = c => SLA[c.status] != null && daysIn(c) > SLA[c.status];
+
+  roleSel.addEventListener("change", () => {
+    role = ROLES[+roleSel.value]; selected = null; editing = null; stageFilter = WAIT[role.key].length ? "you" : "all";
+    $("#whoami").textContent = role.key === "depot" ? `Depot ${DEPOTS[role.depot]}` : "All depots";
+    $("#tabNewBtn").hidden = !(role.key === "depot" || role.key === "ho");
+    $("#tabAuditBtn").hidden = role.key !== "sup";
+    if ((tab === "new" && $("#tabNewBtn").hidden) || (tab === "audit" && $("#tabAuditBtn").hidden)) setTab("claims");
+    resetForm(); renderAll();
+  });
+
+  // ---------- Tabs ----------
+  let tab = "claims";
+  function setTab(t) {
+    tab = t;
+    document.querySelectorAll("#tabs button").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === t));
+    ["claims", "new", "programs", "audit"].forEach(k => $("#tab-" + k).hidden = k !== t);
+    renderAll();
+  }
+  $("#tabs").addEventListener("click", e => { const b = e.target.closest("button"); if (b) setTab(b.dataset.tab); });
+
+  // ---------- Claims list ----------
+  function renderPipeline() {
+    const v = visible(), you = v.filter(waiting).length;
+    $("#youCount").textContent = you;
+    const chips = [];
+    if (WAIT[role.key].length) chips.push({ id: "you", label: "Waiting for you", n: you, cls: "you" });
+    chips.push({ id: "all", label: "All", n: v.length });
+    STAGES.forEach(s => chips.push({ id: s.name, label: s.name, n: v.filter(c => s.s.includes(c.status)).length }));
+    $("#pipeline").innerHTML = chips.map(c => `<button type="button" class="chip ${c.cls || ""}" data-id="${esc(c.id)}" aria-pressed="${stageFilter === c.id}">${esc(c.label)} <b>${c.n}</b></button>`).join("");
+    $("#scopeMeta").textContent = role.key === "depot" ? `Depot ${DEPOTS[role.depot]} only` : "All depots";
+  }
+  $("#pipeline").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; stageFilter = b.dataset.id; renderList(); renderPipeline(); });
+
+  function renderList() {
+    let list = visible();
+    if (stageFilter === "you") list = list.filter(waiting);
+    else if (stageFilter !== "all") list = list.filter(c => STAGES.find(s => s.name === stageFilter).s.includes(c.status));
+    list = list.slice().sort((a, b) => b.history[b.history.length - 1].at - a.history[a.history.length - 1].at);
+    const t = $("#claimsTbl");
+    if (!list.length) { t.innerHTML = `<tbody><tr><td>${stageFilter === "you" ? "Nothing is waiting for you." : "No claims at this stage."}</td></tr></tbody>`; return; }
+    t.innerHTML = `<thead><tr><th>Claim</th><th>Customer</th><th class="r">Reward</th><th>Status</th><th>In status</th></tr></thead><tbody>` +
+      list.map(c => `<tr class="click ${selected === c ? "sel" : ""}" data-no="${c.no}"><td class="nowrap"><button type="button" class="linkbtn mono" style="font-size:13px">${c.no}</button><small>${DEPOTS[c.depot]} · ${esc(c.prog)}</small></td>
+        <td class="cust">${esc(c.cust)}<small>${esc(c.sales)}</small></td><td class="r nowrap">${rp(c.reward)}</td><td>${badge(c.status)}</td>
+        <td class="nowrap"><span class="sla num">${daysIn(c)} d${overSla(c) ? ' <span class="pill crit"><i aria-hidden="true">!</i>Over SLA</span>' : ""}</span></td></tr>`).join("") + "</tbody>";
+    t.querySelectorAll("tr.click").forEach(tr => tr.addEventListener("click", () => {
+      selected = claims.find(c => c.no === tr.dataset.no); renderList(); renderDetail();
+      if (window.innerWidth < 960) $("#detail").scrollIntoView({ behavior: "smooth", block: "start" });
+    }));
+  }
+
+  // ---------- Detail ----------
+  const ACT = {
+    review: { to: "Under review", label: "Start review", log: "Started review", kind: "primary" },
+    forward: { to: "Waiting finance approval", label: "Forward to finance", log: "Forwarded to finance", kind: "primary" },
+    revise: { to: "Revision required", label: "Request revision", log: "Requested revision", note: true },
+    reject: { to: "Rejected", label: "Reject", log: "Rejected", note: true, kind: "danger" },
+    approve: { to: "Approved", label: "Approve and sign", log: "Approved and signed", kind: "primary" },
+    pay: { to: "Processing payment", label: "Start payment", log: "Started payment", kind: "primary" },
+    paid: { to: "Paid", label: "Mark as paid", log: "Marked as paid", kind: "primary" },
+    complete: { to: "Completed", label: "Attach handover photo and complete", log: "Completed with handover photo", kind: "primary" },
+    edit: { label: "Open in form", kind: "primary" },
+  };
+  function actionsFor(c) {
+    const s = c.status, k = role.key;
+    if (k === "depot" && c.depot === role.depot) {
+      if (s === "Draft" || s === "Revision required") return ["edit"];
+      if (s === "Paid") return ["complete"];
+    }
+    if (k === "ho") {
+      if (s === "Draft" && c.createdBy === role.name) return ["edit"];
+      if (s === "Submitted" || s === "Resubmitted") return ["review"];
+      if (s === "Under review") return ["forward", "revise", "reject"];
+      if (s === "Approved") return ["pay"];
+      if (s === "Processing payment") return ["paid"];
+    }
+    if (k === "fin" && s === "Waiting finance approval") return ["approve", "reject"];
+    return [];
+  }
+  function whoActs(s) {
+    if (["Draft", "Revision required", "Paid"].includes(s)) return "the depot admin";
+    if (s === "Waiting finance approval") return "the finance manager";
+    if (["Completed", "Rejected"].includes(s)) return null;
+    return "head office";
+  }
+  function attList(c, withMissing) {
+    const rows = [["mou", "Signed MoU", true], ["pay", "Customer payment proof", true], ["inv", "Invoice copy", false], ["oth", "Other document", false]];
+    if (c.att.hand) rows.push(["hand", "Handover photo", false]);
+    return rows.map(([k, label, req]) => c.att[k] ? `<li><span class="pill good"><i aria-hidden="true">✓</i>${label}</span><span class="fn">${esc(c.att[k])}</span></li>`
+      : (withMissing ? `<li>${req ? `<span class="pill crit"><i aria-hidden="true">✕</i>${label}</span><span class="opt">Missing, required</span>` : `<span class="pill info"><i aria-hidden="true">–</i>${label}</span><span class="opt">Optional, not attached</span>`}</li>` : "")).join("");
+  }
+  function docHtml(c) {
+    const p = prog(c.prog);
+    const appr = c.sign ? `<span class="space">e-signed<br>${fDT(c.sign.at)}</span>` : `<span class="space pending">Pending</span>`;
+    return `<div class="doc" aria-label="Reward realization document">
+      <div class="doc-head"><div><div class="doc-title">REWARD REALIZATION</div><div class="doc-no">No. ${c.no}</div></div><div class="doc-meta">Depot ${DEPOTS[c.depot]}<br>${fDate(c.created)}</div></div>
+      <table class="doc-tbl"><tbody>
+        <tr><th>Salesman</th><td>${esc(c.sales)}</td></tr><tr><th>Customer</th><td>${esc(c.cust)}</td></tr>
+        <tr><th>Reward amount</th><td>${rp(c.reward)}</td></tr><tr><th>Reward given as</th><td>${esc(c.type)}</td></tr>
+        <tr><th>Invoice number</th><td>${esc(c.inv)}</td></tr>
+        ${c.type === "Bank transfer" ? `<tr><th>Bank</th><td>${esc(c.bank)}</td></tr><tr><th>Account number</th><td>${esc(c.acc)}</td></tr><tr><th>Account holder</th><td>${esc(c.holder)}</td></tr>` : ""}
+        <tr><th>Note</th><td>${esc(p ? p.name : c.prog)}</td></tr>
+      </tbody></table>
+      <div class="sigs">
+        <div class="sig"><span class="role">Submitted by</span><span class="space pending"></span><span class="name">${esc(c.createdBy)}</span></div>
+        <div class="sig"><span class="role">Approved by</span>${appr}<span class="name">${c.sign ? esc(c.sign.name) : "Finance Manager"}</span></div>
+        <div class="sig"><span class="role">Handed over by</span><span class="space pending"></span><span class="name">${esc(c.sales)}</span></div>
+        <div class="sig"><span class="role">Received by</span><span class="space pending"></span><span class="name">${esc(c.cust)}</span></div>
+      </div></div>`;
+  }
+  let showDoc = false;
+  function renderDetail() {
+    const box = $("#detail"), c = selected;
+    if (!c || !visible().includes(c)) { box.innerHTML = '<p class="detail-empty">Select a claim to see its details, attachments, history and the actions available to you.</p>'; return; }
+    const p = prog(c.prog), acts = actionsFor(c), who = whoActs(c.status);
+    const sla = SLA[c.status] != null ? `In this status for ${daysIn(c)} day${daysIn(c) === 1 ? "" : "s"} · target ${SLA[c.status]} day${SLA[c.status] > 1 ? "s" : ""} ${overSla(c) ? '<span class="pill crit"><i aria-hidden="true">!</i>Over SLA</span>' : '<span class="pill good"><i aria-hidden="true">✓</i>Within SLA</span>'}` : "";
+    box.innerHTML = `<div class="card-head"><h2 class="mono" style="font-family:var(--font-mono);font-size:16px">${c.no}</h2>${badge(c.status)}</div>
+      <p class="meta" style="font-size:13.5px;color:var(--ink-2);display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:12px">${sla}</p>
+      <dl class="dl">
+        <div><dt>Depot</dt><dd>${DEPOTS[c.depot]}</dd></div><div><dt>Salesman</dt><dd>${esc(c.sales)}</dd></div>
+        <div><dt>Customer</dt><dd>${esc(c.cust)}</dd></div><div><dt>Program</dt><dd>${esc(c.prog)} · ${esc(p ? p.name : "")}</dd></div>
+        <div><dt>Invoice</dt><dd class="num">${esc(c.inv)}</dd></div><div><dt>Invoice total</dt><dd class="num">${rp(c.invAmt)}</dd></div>
+        <div><dt>Paid in full on</dt><dd>${c.paid ? fDate(new Date(c.paid + "T00:00:00Z")) : "Not entered"}</dd></div><div><dt>Reward</dt><dd class="num">${rp(c.reward)} · ${esc(c.type)}</dd></div>
+        ${c.type === "Bank transfer" ? `<div><dt>Bank account</dt><dd>${esc(c.bank)} ${esc(c.acc)}</dd></div><div><dt>Account holder</dt><dd>${esc(c.holder)}</dd></div>` : ""}
+      </dl>
+      <p class="sec-title">Attachments</p><ul class="att">${attList(c, true)}</ul>
+      <p class="sec-title">Your actions</p>
+      ${acts.length ? `<div class="actions">${acts.some(a => ACT[a].note !== undefined || a === "forward" || a === "paid") ? `<div class="field"><label for="actNote">Note${acts.some(a => ACT[a].note) ? " (required to reject or request a revision)" : " (optional)"}</label><textarea id="actNote" placeholder="${acts.includes("paid") ? "e.g. transfer reference" : "Reason or instruction"}"></textarea></div>` : ""}
+        <div class="btn-row">${acts.map(a => `<button type="button" class="btn ${ACT[a].kind === "primary" ? "btn-primary" : ""} ${ACT[a].kind === "danger" ? "btn-danger" : ""}" data-act="${a}">${ACT[a].label}</button>`).join("")}</div>
+        <p class="msg" id="actMsg" role="status"></p></div>`
+        : `<p class="muted" style="font-size:14px">${who ? `Nothing for you to do at this stage. Next step is with ${who}.` : "This claim is closed."}</p>`}
+      <div class="btn-row" style="margin-top:14px"><button type="button" class="btn" id="docBtn" aria-expanded="${showDoc}">${showDoc ? "Hide" : "Show"} reward realization document</button></div>
+      <div id="docBox" ${showDoc ? "" : "hidden"}>${docHtml(c)}<p class="footer-note">In the production system this document is printed from the claim and signed by hand at handover.</p></div>
+      <p class="sec-title">History</p>
+      <ol class="history">${c.history.map(h => `<li><span class="when">${fDT(h.at)}</span><br><b>${esc(h.action)}</b> <span class="by">by ${esc(h.by)}, ${esc(h.title)}</span>${h.note ? `<q>${esc(h.note)}</q>` : ""}</li>`).join("")}</ol>`;
+    $("#docBtn").addEventListener("click", () => { showDoc = !showDoc; renderDetail(); });
+    box.querySelectorAll("[data-act]").forEach(b => b.addEventListener("click", () => act(c, b.dataset.act)));
+  }
+  function act(c, a) {
+    if (a === "edit") { loadForm(c); setTab("new"); return; }
+    const def = ACT[a], noteEl = $("#actNote"), note = noteEl ? noteEl.value.trim() : "";
+    if (def.note && !note) { $("#actMsg").textContent = "Add a note explaining the reason first."; noteEl.focus(); return; }
+    const at = now();
+    if (a === "approve") c.sign = { name: role.name, at };
+    if (a === "complete") c.att.hand = "Handover_photo.jpg";
+    c.status = def.to;
+    c.history.push({ at, action: def.log, by: role.name, title: role.title, note });
+    renderAll();
+    const m = $("#actMsg"); if (m) m.textContent = "";
+    flash(`${c.no}: ${def.log.toLowerCase()}. Next step is with ${whoActs(c.status) || "nobody, the claim is closed"}.`);
+  }
+  function flash(text) {
+    const box = $("#detail"); let p = box.querySelector(".flash");
+    if (!p) { p = document.createElement("p"); p.className = "msg flash"; p.setAttribute("role", "status"); p.style.marginBottom = "8px"; box.prepend(p); }
+    p.textContent = text;
+  }
+
+  // ---------- Form ----------
+  const ATT = [["mou", "Signed MoU", true], ["pay", "Customer payment proof", true], ["inv", "Invoice copy", false], ["oth", "Other document", false]];
+  let formAtt = {};
+  function fillSelect(sel, opts, val) { sel.innerHTML = opts.map(o => `<option value="${esc(o.v ?? o)}">${esc(o.t ?? o)}</option>`).join(""); if (val != null) sel.value = val; }
+  function formDepot() { return role.key === "depot" ? role.depot : $("#fDepot").value; }
+  function syncDepot(sales, cust) {
+    const d = formDepot();
+    fillSelect($("#fSales"), SALES[d], sales); fillSelect($("#fCust"), CUST[d], cust);
+  }
+  function renderAttach() {
+    $("#attachList").innerHTML = ATT.map(([k, label, req]) => `<div class="attach-row"><span class="what">${label} ${req ? '<span class="req">Required</span>' : ""}</span>
+      ${formAtt[k] ? `<span class="att"><span class="fn">${esc(formAtt[k])}</span></span><button type="button" class="btn btn-sm" data-rm="${k}">Remove</button>` : `<button type="button" class="btn btn-sm" data-add="${k}">Attach sample file</button>`}</div>`).join("");
+  }
+  $("#attachList").addEventListener("click", e => {
+    const a = e.target.closest("[data-add]"), r = e.target.closest("[data-rm]");
+    if (a) formAtt[a.dataset.add] = { mou: "MoU_signed.pdf", pay: "Payment_proof.pdf", inv: "Invoice_copy.pdf", oth: "Delivery_note.pdf" }[a.dataset.add];
+    if (r) delete formAtt[r.dataset.rm];
+    renderAttach(); renderChecks();
+  });
+  function readForm() {
+    return { depot: formDepot(), sales: $("#fSales").value, cust: $("#fCust").value, prog: $("#fProg").value, inv: $("#fInv").value.trim().toUpperCase(),
+      invAmt: parseRp($("#fInvAmt").value), paid: $("#fPaid").value, reward: parseRp($("#fReward").value), type: $("#fType").value,
+      bank: $("#fBank").value.trim(), acc: $("#fAcc").value.trim(), holder: $("#fHolder").value.trim(), att: { ...formAtt } };
+  }
+  function checks(f) {
+    const p = prog(f.prog), out = [];
+    const dup = f.inv && claims.find(c => c !== editing && c.inv.toUpperCase() === f.inv && c.status !== "Rejected");
+    out.push({ ok: !!f.inv && !dup, t: !f.inv ? "Invoice number entered" : dup ? `Invoice ${f.inv} is already claimed` : "No other claim uses this invoice", s: dup ? `${dup.no}, ${dup.status.toLowerCase()}` : "Duplicate-invoice check" });
+    if (p && p.type === "Regular") {
+      out.push({ ok: f.invAmt >= p.min, t: `Invoice total at least ${rp(p.min)}`, s: `${p.code} minimum purchase · entered ${rp(f.invAmt)}` });
+      out.push({ ok: f.reward > 0 && f.reward <= p.max, t: `Reward between Rp 1 and ${rp(p.max)}`, s: `${p.code} reward cap · entered ${rp(f.reward)}` });
+    } else if (p) {
+      out.push({ ok: f.reward > 0, t: "Reward amount entered", s: "Tonnage program: no minimum purchase or cap" });
+    }
+    out.push({ ok: !!f.paid, t: "Invoice paid-in-full date entered", s: "Claims are paid only after the customer settles the invoice" });
+    out.push({ ok: !!f.att.mou, t: "Signed MoU attached", s: "Required" });
+    out.push({ ok: !!f.att.pay, t: "Customer payment proof attached", s: "Required" });
+    if (f.type === "Bank transfer") out.push({ ok: !!(f.bank && f.acc && f.holder), t: "Bank, account number and holder entered", s: "Needed for a bank transfer" });
+    return out;
+  }
+  function renderChecks() {
+    const f = readForm();
+    $("#bankFields").hidden = f.type !== "Bank transfer";
+    $("#liveChecks").innerHTML = checks(f).map(c => `<li>${c.ok ? '<span class="pill good"><i aria-hidden="true">✓</i></span>' : '<span class="pill crit"><i aria-hidden="true">✕</i></span>'}<span><span class="sr">${c.ok ? "Passed:" : "Failed:"}</span>${esc(c.t)}<small>${esc(c.s)}</small></span></li>`).join("");
+  }
+  function resetForm(prefill = true) {
+    editing = null; formAtt = {};
+    fillSelect($("#fDepot"), Object.keys(DEPOTS).map(k => ({ v: k, t: DEPOTS[k] })), "SBY");
+    $("#depotField").hidden = role.key === "depot";
+    fillSelect($("#fProg"), programs.filter(p => p.active).map(p => ({ v: p.code, t: `${p.code} · ${p.name}` })), "RG-01");
+    syncDepot();
+    const set = (id, v) => $(id).value = v;
+    if (prefill) {
+      $("#fSales").value = "Eka"; $("#fCust").value = "TB Sumber Rejeki";
+      set("#fInv", "SI-2610-00412"); set("#fInvAmt", "32.500.000"); set("#fPaid", "2026-10-20"); set("#fReward", "1.250.000");
+      set("#fType", "Bank transfer"); set("#fBank", "BCA"); set("#fAcc", "1230 4455 67"); set("#fHolder", "Hartono");
+      formAtt = { mou: "MoU_signed.pdf" };
+      $("#formMeta").textContent = "The form opens with an example. Its invoice is already claimed, so the duplicate check fails until you change the number.";
+    } else {
+      ["#fInv", "#fInvAmt", "#fPaid", "#fReward", "#fBank", "#fAcc", "#fHolder"].forEach(id => set(id, "")); set("#fType", "Invoice deduction");
+      $("#formMeta").textContent = "";
+    }
+    $("#formTitle").textContent = "New claim"; $("#submitBtn").textContent = "Submit for review"; $("#draftBtn").hidden = false;
+    $("#formErrors").hidden = true; $("#formMsg").textContent = "";
+    renderAttach(); renderChecks();
+  }
+  function loadForm(c) {
+    resetForm(false); editing = c;
+    if (role.key !== "depot") $("#fDepot").value = c.depot;
+    syncDepot(c.sales, c.cust);
+    if (!prog(c.prog).active) $("#fProg").insertAdjacentHTML("beforeend", `<option value="${c.prog}">${c.prog}</option>`);
+    $("#fProg").value = c.prog; $("#fInv").value = c.inv; $("#fInvAmt").value = c.invAmt.toLocaleString("id-ID"); $("#fPaid").value = c.paid;
+    $("#fReward").value = c.reward.toLocaleString("id-ID"); $("#fType").value = c.type; $("#fBank").value = c.bank || ""; $("#fAcc").value = c.acc || ""; $("#fHolder").value = c.holder || "";
+    formAtt = { ...c.att };
+    $("#formTitle").textContent = `Edit ${c.no}`;
+    const last = c.history[c.history.length - 1];
+    $("#formMeta").textContent = c.status === "Revision required" ? `Head office asked: “${last.note}”` : "Draft";
+    $("#submitBtn").textContent = c.status === "Revision required" ? "Resubmit" : "Submit for review";
+    $("#draftBtn").hidden = c.status === "Revision required";
+    renderAttach(); renderChecks();
+  }
+  $("#fDepot").addEventListener("change", () => { syncDepot(); renderChecks(); });
+  $("#claimForm").addEventListener("input", renderChecks);
+  $("#claimForm").addEventListener("change", renderChecks);
+  ["#fInvAmt", "#fReward"].forEach(id => $(id).addEventListener("blur", e => { const v = parseRp(e.target.value); e.target.value = v ? v.toLocaleString("id-ID") : ""; renderChecks(); }));
+  $("#clearBtn").addEventListener("click", () => resetForm(false));
+  function save(submit) {
+    const f = readForm();
+    if (submit) {
+      const fails = checks(f).filter(c => !c.ok);
+      if (fails.length) {
+        $("#formErrors").hidden = false;
+        $("#formErrors").innerHTML = `<b>Fix ${fails.length} item${fails.length > 1 ? "s" : ""} before submitting:</b><ul>${fails.map(c => `<li>${esc(c.t)}${c.s && c.t.startsWith("Invoice SI") ? ` (${esc(c.s)})` : ""}</li>`).join("")}</ul>`;
+        return;
+      }
+    } else if (!f.cust || !f.prog) return;
+    $("#formErrors").hidden = true;
+    const at = now();
+    let c = editing;
+    if (!c) {
+      c = { no: claimNo(f.depot, at), created: at, history: [], sign: null, createdBy: role.name };
+      claims.push(c);
+    }
+    const wasRevision = c.status === "Revision required";
+    Object.assign(c, f);
+    if (submit) {
+      c.status = wasRevision ? "Resubmitted" : "Submitted";
+      c.history.push({ at, action: wasRevision ? "Resubmitted" : "Submitted", by: role.name, title: role.title, note: "" });
+    } else {
+      c.status = "Draft";
+      c.history.push({ at, action: "Saved draft", by: role.name, title: role.title, note: "" });
+    }
+    selected = c; stageFilter = "all"; editing = null;
+    setTab("claims");
+    flash(`${c.no} ${submit ? (wasRevision ? "resubmitted" : "submitted") + ". Next step is with head office." : "saved as a draft."}`);
+    resetForm(true);
+  }
+  $("#claimForm").addEventListener("submit", e => { e.preventDefault(); save(true); });
+  $("#draftBtn").addEventListener("click", () => save(false));
+
+  // ---------- Programs & audit ----------
+  function renderPrograms() {
+    const canEdit = role.key === "ho" || role.key === "sup";
+    $("#progTbl").innerHTML = `<thead><tr><th>Code</th><th>Program</th><th>Type</th><th class="r">Min. purchase</th><th class="r">Reward cap</th><th>Status</th>${canEdit ? "<th></th>" : ""}</tr></thead><tbody>` +
+      programs.map((p, i) => `<tr><td class="mono nowrap">${p.code}</td><td>${esc(p.name)}</td><td>${p.type}</td><td class="r">${p.min ? rp(p.min) : "–"}</td><td class="r">${p.max ? rp(p.max) : "–"}</td>
+        <td>${p.active ? '<span class="badge" style="--dot:var(--good)">Active</span>' : '<span class="badge">Inactive</span>'}</td>
+        ${canEdit ? `<td><button type="button" class="btn btn-sm" data-p="${i}">${p.active ? "Deactivate" : "Activate"}</button></td>` : ""}</tr>`).join("") + "</tbody>";
+    $("#progTbl").querySelectorAll("[data-p]").forEach(b => b.addEventListener("click", () => {
+      const p = programs[+b.dataset.p]; p.active = !p.active;
+      $("#progMsg").textContent = `${p.code} is now ${p.active ? "active and shows in the claim form" : "inactive and hidden from the claim form"}.`;
+      renderPrograms(); if (!editing) resetForm(true);
+    }));
+  }
+  function renderAudit() {
+    const rows = claims.flatMap(c => c.history.map(h => ({ c, h }))).sort((a, b) => b.h.at - a.h.at);
+    $("#auditTbl").innerHTML = `<thead><tr><th>When</th><th>Claim</th><th>Action</th><th>By</th><th>Note</th></tr></thead><tbody>` +
+      rows.map(({ c, h }) => `<tr><td class="nowrap num">${fDT(h.at)}</td><td class="mono nowrap" style="font-size:13px">${c.no}</td><td>${esc(h.action)}</td><td>${esc(h.by)}<small>${esc(h.title)}</small></td><td>${esc(h.note)}</td></tr>`).join("") + "</tbody>";
+  }
+
+  function renderAll() { renderPipeline(); renderList(); renderDetail(); if (tab === "programs") renderPrograms(); if (tab === "audit") renderAudit(); }
+
+  $("#whoami").textContent = `Depot ${DEPOTS[role.depot]}`;
+  $("#tabAuditBtn").hidden = true;
+  resetForm(true);
+  selected = claims.find(c => c.status === "Revision required");
+  renderAll();
+})();
+</script>
+</body>
+</html>
