@@ -255,6 +255,8 @@ table.log{width:100%;border-collapse:collapse;font-size:14px;min-width:420px}
 .other article{padding:16px 0;border-top:1px solid var(--line);min-width:0}
 .other h3{font-family:var(--font-body);font-size:18px;font-weight:700;color:var(--ink);margin-bottom:4px}
 .other p{margin:0;color:var(--ink-2);font-size:16px}
+.other article:last-child:nth-child(odd){grid-column:1/-1}
+.other article:last-child:nth-child(odd) p{max-width:62ch}
 .skills{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px}
 .skills h3{font-family:var(--font-mono);font-size:12.5px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
 .skills ul{margin:0;padding:0;list-style:none;display:grid;gap:6px}
@@ -436,7 +438,7 @@ footer{padding-top:28px;border-top:1px solid var(--line);font-size:14.5px;color:
     <div><h3>Problem</h3><p>Cash-in and open invoices had to be recapped by salesman and area every month and still tie back to the source export. Collection entries arrived through chat and ad-hoc spreadsheets.</p></div>
     <div><h3>What I did</h3><p>Built a monthly aging recap in five buckets (0–45, 46–75, 76–90, 91–120 and over 120 days) reconciled to source totals, consolidated the outstanding-invoice file, and designed a collection-entry portal that outputs the import format of Accurate Online.</p></div>
     <div><h3>Outcome</h3><p>Collection follow-up targets the oldest balances by salesman, from a recap that reconciles to the ledger. Scale: about 7,900 customers, 1,580 open invoices and 45 sales staff.</p></div>
-    <div class="tools"><span class="tag">Excel · SUMIFS · Pivot Table</span><span class="tag">Accurate Online</span><span class="tag">HTML/JavaScript</span></div>
+    <div class="tools"><span class="tag">Excel · Pivot Table</span><span class="tag">Accurate Online</span><span class="tag">HTML/JavaScript</span></div>
   </div>
   <div class="panel" aria-label="Interactive demo: receivables by age and salesman">
     <div class="panel-head"><span class="panel-title">Outstanding by salesman and age</span><span class="demo-tag">Demo · fictional data</span></div>
@@ -501,7 +503,6 @@ footer{padding-top:28px;border-top:1px solid var(--line);font-size:14.5px;color:
     <article><h3>Internal audit analytics</h3><p>Analyzed 2.5 years of sales, payment and delivery records to trace the root cause of a transaction anomaly, and reviewed stock-count variances across depots and head office, reported as NCRs.</p></article>
     <article><h3>Partner profitability engine</h3><p>A multi-partner profit calculator for third-party distributors, each with its own products, cost basis, pricelist, discounts, incentives and separate access.</p></article>
     <article><h3>Paint formulation and costing system</h3><p>An R&amp;D and QC application that rebuilds formulas from work orders and purchase data to calculate cost per kg and check QC results against standards. <a class="demo-link" href="formulation.html">Open demo →</a></p></article>
-    <article><h3>Warehouse layout redesign</h3><p>Movement and ABC analysis of finished-goods stock to size storage zones and propose a new layout for a depot warehouse handled without forklifts.</p></article>
     <article><h3>Margin and pricing calculators</h3><p>A margin calculator and a sales calculation engine covering three regional pricelists at manager and SPV levels.</p></article>
   </div>
 </section>
@@ -512,7 +513,7 @@ footer{padding-top:28px;border-top:1px solid var(--line);font-size:14.5px;color:
   <div class="skills">
     <div><h3>Analysis &amp; BI</h3><ul>
       <li>Tableau<small>Dashboards for national marketing reviews</small></li>
-      <li>Microsoft Excel<small>Pivot Table, Power Query, XLOOKUP, SUMPRODUCT, Macro</small></li>
+      <li>Microsoft Excel<small>Pivot Table, Power Query, Macro</small></li>
       <li>Google Sheets</li>
       <li>Accurate Online<small>Administrator; exports, import templates, print designs</small></li>
     </ul></div>
