@@ -62,7 +62,7 @@
 <div class="app">
   <header class="topbar">
     <a class="back" href="./">← Portfolio</a>
-    <div class="appname"><h1>Paint Formulation Manager</h1><span class="sub">Formula costing, reformulation and QC for water-based paints</span></div>
+    <div class="appname"><h1>Paint Formulation Manager</h1><span class="sub">Formula costing, reformulation and QC for interior, exterior and metal paints</span></div>
   </header>
   <div class="note"><span><b>Fictional formulas and prices.</b> A simplified recreation of an R&amp;D and QC system I built at work. No real formula, material or price appears here. Changes reset when you reload.</span></div>
 
@@ -197,37 +197,41 @@
   const num = s => { const n = parseFloat(String(s).replace(",", ".")); return isFinite(n) ? n : NaN; };
   const TODAY_LABEL = "2 Nov 2026";
 
-  // ---------- Fictional raw materials ----------
+  // ---------- Fictional raw materials, named by component ----------
   const MAT = [
-    { c: "RM-W01", n: "Water, deionized", cat: "Water", g: "water", p: 120 },
-    { c: "RM-B01", n: "Pure acrylic emulsion", cat: "Binder", g: "binder", p: 28500 },
-    { c: "RM-B02", n: "Styrene-acrylic emulsion", cat: "Binder", g: "binder", p: 21000 },
-    { c: "RM-B03", n: "Vinyl-acrylic emulsion", cat: "Binder", g: "binder", p: 18500 },
-    { c: "RM-P01", n: "Titanium dioxide, rutile", cat: "Pigment", g: "tio2", p: 52000 },
-    { c: "RM-P02", n: "Titanium dioxide, anatase", cat: "Pigment", g: "tio2", p: 41000 },
-    { c: "RM-P03", n: "Yellow iron oxide", cat: "Pigment", g: "yox", p: 24000 },
-    { c: "RM-P04", n: "Red iron oxide", cat: "Pigment", g: "rox", p: 22500 },
-    { c: "RM-P06", n: "Carbon black paste", cat: "Pigment", g: "black", p: 68000 },
-    { c: "RM-E01", n: "Calcium carbonate, 5 µm", cat: "Extender", g: "ext", p: 2300 },
-    { c: "RM-E02", n: "Calcium carbonate, 2 µm", cat: "Extender", g: "ext", p: 3100 },
-    { c: "RM-E03", n: "Calcined kaolin", cat: "Extender", g: "ext", p: 7800 },
-    { c: "RM-E04", n: "Talc", cat: "Extender", g: "ext", p: 6200 },
-    { c: "RM-A01", n: "Polyacrylate dispersant", cat: "Additive", g: "disp", p: 38000 },
-    { c: "RM-A02", n: "Wetting agent", cat: "Additive", g: "wet", p: 45000 },
-    { c: "RM-A03", n: "Mineral-oil defoamer", cat: "Additive", g: "defo", p: 36000 },
-    { c: "RM-A04", n: "Silicone defoamer", cat: "Additive", g: "defo", p: 64000 },
-    { c: "RM-A05", n: "HEC thickener", cat: "Additive", g: "thick", p: 92000 },
-    { c: "RM-A06", n: "Associative thickener (HEUR)", cat: "Additive", g: "thick", p: 78000 },
-    { c: "RM-A07", n: "Amine neutralizer", cat: "Additive", g: "ph", p: 55000 },
-    { c: "RM-A08", n: "In-can biocide", cat: "Additive", g: "bio", p: 60000 },
-    { c: "RM-A09", n: "Ester-alcohol coalescent", cat: "Solvent", g: "solv", p: 33000 },
-    { c: "RM-A10", n: "Propylene glycol", cat: "Solvent", g: "solv", p: 19000 },
+    { c: "RM-01", n: "Water", cat: "Water", g: "water", p: 120 },
+    { c: "RM-02", n: "Binder, water-based A", cat: "Binder", g: "binderwb", p: 28500 },
+    { c: "RM-03", n: "Binder, water-based B", cat: "Binder", g: "binderwb", p: 21000 },
+    { c: "RM-04", n: "Binder, solvent-based", cat: "Binder", g: "bindersb", p: 32000 },
+    { c: "RM-05", n: "White pigment A", cat: "Pigment", g: "white", p: 52000 },
+    { c: "RM-06", n: "White pigment B", cat: "Pigment", g: "white", p: 41000 },
+    { c: "RM-07", n: "Colorant, black", cat: "Pigment", g: "black", p: 68000 },
+    { c: "RM-08", n: "Colorant, yellow", cat: "Pigment", g: "yellow", p: 24000 },
+    { c: "RM-09", n: "Colorant, red", cat: "Pigment", g: "red", p: 26000 },
+    { c: "RM-10", n: "Anti-corrosive pigment", cat: "Pigment", g: "anticor", p: 30000 },
+    { c: "RM-11", n: "Filler A", cat: "Filler", g: "filler", p: 2300 },
+    { c: "RM-12", n: "Filler B", cat: "Filler", g: "filler", p: 3100 },
+    { c: "RM-13", n: "Filler C", cat: "Filler", g: "filler", p: 6200 },
+    { c: "RM-14", n: "Dispersing agent", cat: "Additive", g: "disp", p: 38000 },
+    { c: "RM-15", n: "Wetting agent", cat: "Additive", g: "wet", p: 45000 },
+    { c: "RM-16", n: "Defoamer A", cat: "Additive", g: "defo", p: 36000 },
+    { c: "RM-17", n: "Defoamer B", cat: "Additive", g: "defo", p: 64000 },
+    { c: "RM-18", n: "Thickener A", cat: "Additive", g: "thick", p: 92000 },
+    { c: "RM-19", n: "Thickener B", cat: "Additive", g: "thick", p: 78000 },
+    { c: "RM-20", n: "pH adjuster", cat: "Additive", g: "ph", p: 55000 },
+    { c: "RM-21", n: "Preservative", cat: "Additive", g: "pres", p: 60000 },
+    { c: "RM-22", n: "Coalescent", cat: "Additive", g: "coal", p: 33000 },
+    { c: "RM-23", n: "Anti-settling agent", cat: "Additive", g: "antiset", p: 70000 },
+    { c: "RM-24", n: "Drier", cat: "Additive", g: "drier", p: 48000 },
+    { c: "RM-25", n: "Anti-skinning agent", cat: "Additive", g: "antiskin", p: 52000 },
+    { c: "RM-26", n: "Solvent A", cat: "Solvent", g: "solv", p: 16000 },
+    { c: "RM-27", n: "Solvent B", cat: "Solvent", g: "solv", p: 21000 },
   ];
   const MB = Object.fromEntries(MAT.map(m => [m.c, m]));
   const REF = Object.fromEntries(MAT.map(m => [m.c, m.p]));
   const price = { ...REF };
-  const CATS = ["Binder", "Pigment", "Extender", "Additive", "Solvent", "Water"];
-  const GROUP = { water: "Water", binder: "Binders", tio2: "Titanium dioxide", yox: "Yellow oxide", rox: "Red oxide", black: "Black", ext: "Extenders", disp: "Dispersant", wet: "Wetting", defo: "Defoamers", thick: "Thickeners", ph: "pH control", bio: "Biocide", solv: "Coalescents & glycols" };
+  const CATS = ["Binder", "Pigment", "Filler", "Additive", "Solvent", "Water"];
+  const GROUP = { water: "Water", binderwb: "Water-based binders", bindersb: "Solvent-based binder", white: "White pigments", black: "Black colorant", yellow: "Yellow colorant", red: "Red colorant", anticor: "Anti-corrosive pigment", filler: "Fillers", disp: "Dispersing agent", wet: "Wetting agent", defo: "Defoamers", thick: "Thickeners", ph: "pH adjuster", pres: "Preservative", coal: "Coalescent", antiset: "Anti-settling agent", drier: "Drier", antiskin: "Anti-skinning agent", solv: "Solvents" };
 
   // ---------- Fictional formulas (parts per 100 kg; let-down water balances to 100) ----------
   const balance = items => { const fixed = items.filter(i => !i.bal).reduce((s, i) => s + i.q, 0); const b = items.find(i => i.bal); if (b) b.q = Math.round((100 - fixed) * 100) / 100; return items; };
@@ -240,34 +244,27 @@
     { k: "fine", n: "Fineness of grind", u: "µm", d: 0 }, { k: "gloss", n: "Gloss 60°", u: "GU", d: 0 }, { k: "cr", n: "Contrast ratio", u: "%", d: 1 },
   ];
   const F = [
-    { code: "WB-IM-100", name: "Interior Matt White", line: "Interior", finish: "Matt",
-      items: [["G", "RM-W01", 20], ["G", "RM-A01", 0.5], ["G", "RM-A02", 0.15], ["G", "RM-A03", 0.2], ["G", "RM-A05", 0.45], ["G", "RM-P01", 12], ["G", "RM-E01", 20], ["G", "RM-E03", 6], ["G", "RM-E04", 3],
-        ["L", "RM-B02", 18], ["L", "RM-A09", 0.8], ["L", "RM-A10", 1], ["L", "RM-A03", 0.15], ["L", "RM-A08", 0.15], ["L", "RM-A07", 0.15], ["L", "RM-W01", null]],
+    { code: "INT-01", name: "Interior Paint", base: "Water-based", colorName: "White",
+      items: [["G", "RM-01", 20], ["G", "RM-14", 0.5], ["G", "RM-15", 0.15], ["G", "RM-16", 0.2], ["G", "RM-18", 0.45], ["G", "RM-05", 12], ["G", "RM-11", 20], ["G", "RM-12", 6], ["G", "RM-13", 3],
+        ["L", "RM-03", 18], ["L", "RM-22", 0.8], ["L", "RM-16", 0.15], ["L", "RM-21", 0.15], ["L", "RM-20", 0.15], ["L", "RM-01", null]],
       spec: { visc: [95, 105], dens: [1.38, 1.46], ph: [8.5, 9.5], fine: [null, 50], gloss: [1, 4], cr: [94, null] }, color: { L: 96.2, a: -0.5, b: 2.0 } },
-    { code: "WB-IM-130", name: "Interior Matt Cream", line: "Interior", finish: "Matt",
-      items: [["G", "RM-W01", 20], ["G", "RM-A01", 0.5], ["G", "RM-A02", 0.15], ["G", "RM-A03", 0.2], ["G", "RM-A05", 0.45], ["G", "RM-P01", 10], ["G", "RM-E01", 20], ["G", "RM-E03", 6], ["G", "RM-E04", 3],
-        ["L", "RM-B02", 18], ["L", "RM-A09", 0.8], ["L", "RM-A10", 1], ["L", "RM-A03", 0.15], ["L", "RM-A08", 0.15], ["L", "RM-A07", 0.15], ["L", "RM-P03", 0.6], ["L", "RM-P04", 0.05], ["L", "RM-W01", null]],
-      spec: { visc: [95, 105], dens: [1.37, 1.45], ph: [8.5, 9.5], fine: [null, 50], gloss: [1, 4], cr: [95, null] }, color: { L: 90.4, a: 1.6, b: 13.8 } },
-    { code: "WB-ES-200", name: "Exterior Satin White", line: "Exterior", finish: "Satin",
-      items: [["G", "RM-W01", 14], ["G", "RM-A01", 0.6], ["G", "RM-A02", 0.2], ["G", "RM-A04", 0.2], ["G", "RM-A05", 0.25], ["G", "RM-P01", 21], ["G", "RM-E02", 6],
-        ["L", "RM-B01", 38], ["L", "RM-A06", 0.8], ["L", "RM-A09", 1.6], ["L", "RM-A10", 1.5], ["L", "RM-A04", 0.1], ["L", "RM-A08", 0.15], ["L", "RM-A07", 0.2], ["L", "RM-W01", null]],
-      spec: { visc: [100, 110], dens: [1.28, 1.36], ph: [8.5, 9.5], fine: [null, 25], gloss: [12, 20], cr: [96, null] }, color: { L: 96.8, a: -0.7, b: 1.6 } },
-    { code: "WB-ES-210", name: "Exterior Satin Grey", line: "Exterior", finish: "Satin",
-      items: [["G", "RM-W01", 14], ["G", "RM-A01", 0.6], ["G", "RM-A02", 0.2], ["G", "RM-A04", 0.2], ["G", "RM-A05", 0.25], ["G", "RM-P01", 16], ["G", "RM-E02", 8],
-        ["L", "RM-B01", 38], ["L", "RM-A06", 0.8], ["L", "RM-A09", 1.6], ["L", "RM-A10", 1.5], ["L", "RM-A04", 0.1], ["L", "RM-A08", 0.15], ["L", "RM-A07", 0.2], ["L", "RM-P06", 0.35], ["L", "RM-W01", null]],
-      spec: { visc: [100, 110], dens: [1.27, 1.35], ph: [8.5, 9.5], fine: [null, 25], gloss: [12, 20], cr: [98, null] }, color: { L: 63.0, a: -0.9, b: -1.2 } },
-    { code: "WB-EC-050", name: "Economy Wall White", line: "Interior", finish: "Matt",
-      items: [["G", "RM-W01", 22], ["G", "RM-A01", 0.4], ["G", "RM-A03", 0.25], ["G", "RM-A05", 0.55], ["G", "RM-P02", 6], ["G", "RM-E01", 30], ["G", "RM-E03", 4], ["G", "RM-E04", 5],
-        ["L", "RM-B03", 12], ["L", "RM-A09", 0.5], ["L", "RM-A03", 0.1], ["L", "RM-A08", 0.12], ["L", "RM-A07", 0.12], ["L", "RM-W01", null]],
-      spec: { visc: [90, 102], dens: [1.50, 1.60], ph: [8.5, 9.5], fine: [null, 60], gloss: [0, 3], cr: [90, null] }, color: { L: 94.5, a: -0.3, b: 2.6 } },
+    { code: "EXT-01", name: "Exterior Paint", base: "Water-based", colorName: "Light grey",
+      items: [["G", "RM-01", 14], ["G", "RM-14", 0.6], ["G", "RM-15", 0.2], ["G", "RM-17", 0.2], ["G", "RM-18", 0.25], ["G", "RM-05", 18], ["G", "RM-12", 8],
+        ["L", "RM-02", 38], ["L", "RM-19", 0.8], ["L", "RM-22", 1.6], ["L", "RM-17", 0.1], ["L", "RM-21", 0.15], ["L", "RM-20", 0.2], ["L", "RM-07", 0.12], ["L", "RM-01", null]],
+      spec: { visc: [100, 110], dens: [1.28, 1.38], ph: [8.5, 9.5], fine: [null, 30], gloss: [5, 15], cr: [96, null] }, color: { L: 82.0, a: -0.6, b: -0.8 } },
+    { code: "MTL-01", name: "Metal Paint", base: "Solvent-based", colorName: "Red",
+      items: [["G", "RM-26", 8], ["G", "RM-14", 0.8], ["G", "RM-23", 0.5], ["G", "RM-09", 6], ["G", "RM-10", 8], ["G", "RM-12", 10],
+        ["L", "RM-04", 45], ["L", "RM-27", 10], ["L", "RM-24", 1.2], ["L", "RM-25", 0.3], ["L", "RM-26", null]],
+      spec: { visc: [85, 95], dens: [1.25, 1.35], fine: [null, 20], gloss: [80, 90], cr: [98, null] }, color: { L: 40.0, a: 32.0, b: 22.0 } },
   ].map(f => ({ ...f, versions: [{ v: 1, status: "Approved", date: "14 Mar 2026", by: "R&D", note: "Initial standard", items: mk(f.items) }], std: 1, tests: [] }));
   // A pending reformulation on the first formula
   (() => { const f = F[0], it = clone(f.versions[0].items); it[4].q = 0.4; it[5].q = 11.5; it[6].q = 20.5; balance(it);
-    f.versions.push({ v: 2, status: "Submitted", date: "28 Oct 2026", by: "R&D", note: "Lower TiO2 and HEC; more 5 µm carbonate", items: it }); })();
+    f.versions.push({ v: 2, status: "Submitted", date: "28 Oct 2026", by: "R&D", note: "Less white pigment and thickener; more Filler A", items: it }); })();
   const stdItems = f => f.versions.find(v => v.v === f.std).items;
 
   // seed test history
   const dec = k => PARAMS.find(p => p.k === k).d;
+  const fparams = f => PARAMS.filter(p => f.spec[p.k]);
   const round = (v, d) => Math.round(v * 10 ** d) / 10 ** d;
   function sampleVal(spec, k) {
     const [lo, hi] = spec[k];
@@ -279,7 +276,7 @@
   }
   F.forEach((f, fi) => {
     for (let i = 0; i < 9; i++) {
-      const res = {}; PARAMS.forEach(p => res[p.k] = sampleVal(f.spec, p.k));
+      const res = {}; fparams(f).forEach(p => res[p.k] = sampleVal(f.spec, p.k));
       f.tests.push({ lot: `LOT-2610-${String(fi * 10 + i + 11).padStart(3, "0")}`, date: `${3 + i * 3} Oct 2026`, v: 1, res });
     }
   });
@@ -287,12 +284,12 @@
   const specText = (f, k) => { const [lo, hi] = f.spec[k], u = PARAMS.find(p => p.k === k).u, d = dec(k); return lo != null && hi != null ? `${lo.toFixed(d)}–${hi.toFixed(d)} ${u}` : hi != null ? `max ${hi.toFixed(d)} ${u}` : `min ${lo.toFixed(d)} ${u}`; };
 
   const KB = {
-    visc: { low: "Raise thickener in 0.05-part steps (HEC in the grind or associative thickener in the let-down). Confirm the thickener was fully swollen before let-down.", high: "Hold back part of the let-down water and add it after a viscosity check. Reduce thickener in the next batch." },
-    dens: { low: "Check pigment and extender weighing records and look for entrapped air; add defoamer if foam is visible.", high: "Confirm all let-down water was added and verify the extender charge weight." },
-    ph: { low: "Add amine neutralizer in 0.02-part steps and re-test after 10 minutes of mixing.", high: "Stop further neutralizer additions and re-test after the batch has rested." },
-    fine: { high: "Extend high-speed dispersion and check the dispersant level against the pigment and extender load." },
-    gloss: { low: "Check fineness first. If it is in spec, the extender level is too high for this finish: raise binder or reduce extender.", high: "Add a little matting extender, or check that the binder charge was not exceeded." },
-    cr: { low: "Raise TiO2 or reduce extender, and confirm the drawdown film thickness used for the test." },
+    visc: { low: "Raise the thickener (or the anti-settling agent in solvent-based paint) in 0.05-part steps, and confirm it was fully dispersed before let-down.", high: "Hold back part of the let-down water or solvent and add it after a viscosity check. Reduce thickener in the next batch." },
+    dens: { low: "Check pigment and filler weighing records and look for entrapped air; add defoamer if foam is visible.", high: "Confirm all let-down water or solvent was added and verify the filler charge weight." },
+    ph: { low: "Add pH adjuster in 0.02-part steps and re-test after 10 minutes of mixing.", high: "Stop further pH adjuster additions and re-test after the batch has rested." },
+    fine: { high: "Extend high-speed dispersion and check the dispersing agent level against the pigment and filler load." },
+    gloss: { low: "Check fineness first. If it is in spec, the filler level is too high for the target gloss: raise binder or reduce filler.", high: "Add a little filler, or check that the binder charge was not exceeded." },
+    cr: { low: "Raise white pigment or reduce filler, and confirm the drawdown film thickness used for the test." },
   };
 
   // ---------- State ----------
@@ -313,11 +310,11 @@
 
   // ---------- Formulas tab ----------
   function renderFormulas() {
-    $("#flist").innerHTML = F.map((f, i) => `<button type="button" class="fitem" data-i="${i}" aria-pressed="${i === fi}"><b>${esc(f.name)}</b><small>${f.code} · ${f.finish}</small><span class="c">${rp(costKg(stdItems(f)))}/kg</span></button>`).join("");
+    $("#flist").innerHTML = F.map((f, i) => `<button type="button" class="fitem" data-i="${i}" aria-pressed="${i === fi}"><b>${esc(f.name)}</b><small>${f.code} · ${f.base}</small><span class="c">${rp(costKg(stdItems(f)))}/kg</span></button>`).join("");
     $("#flist").querySelectorAll(".fitem").forEach(b => b.addEventListener("click", () => { fi = +b.dataset.i; onFormulaChange(); }));
     const f = F[fi], items = stdItems(f), ck = costKg(items);
     const stdV = f.versions.find(v => v.v === f.std);
-    $("#fhead").innerHTML = `<div><h2>${esc(f.name)}</h2></div><div class="meta"><span class="mono">${f.code}</span><span>${f.line} · ${f.finish} · water-based</span><span class="badge" style="--dot:var(--good)">Standard v${f.std}</span><button type="button" class="btn btn-sm" id="goReform">Reformulate</button></div>`;
+    $("#fhead").innerHTML = `<div><h2>${esc(f.name)}</h2></div><div class="meta"><span class="mono">${f.code}</span><span>${f.base} · standard color: ${esc(f.colorName)}</span><span class="badge" style="--dot:var(--good)">Standard v${f.std}</span><button type="button" class="btn btn-sm" id="goReform">Reformulate</button></div>`;
     $("#goReform").addEventListener("click", () => setTab("reform"));
     $("#fkpis").innerHTML = [
       ["Raw material cost", `${rp(ck)}`, "per kg of paint"],
@@ -400,7 +397,7 @@
       <p style="margin:4px 0 10px;font-size:14.5px">${deltaHtml(nc - bc, bc, "/kg")} <span class="muted">vs v${state.baseV}</span></p>
       <div class="sumrow"><span class="k">Per 20 kg pail</span><span class="num">${rp(nc * 20)} <span class="muted">(${(nc - bc) * 20 >= 0 ? "+" : "−"}${rp(Math.abs(nc - bc) * 20)})</span></span></div>
       <div class="sumrow"><span class="k">Against the current standard v${f.std}</span><span class="num">${rp(sc)}/kg</span></div>
-      <div class="sumrow"><span class="k">Total parts</span><span>${ok ? `<span class="pill good"><i aria-hidden="true">✓</i>${q2(tot)}</span>` : `<span class="pill warn"><i aria-hidden="true">!</i>${q2(tot)}, must be 100.00</span> <button type="button" class="btn btn-sm" id="balBtn">Balance with let-down water</button>`}</span></div>
+      <div class="sumrow"><span class="k">Total parts</span><span>${ok ? `<span class="pill good"><i aria-hidden="true">✓</i>${q2(tot)}</span>` : `<span class="pill warn"><i aria-hidden="true">!</i>${q2(tot)}, must be 100.00</span> <button type="button" class="btn btn-sm" id="balBtn">Balance to 100 parts</button>`}</span></div>
       <p class="sec-title" style="font-family:var(--font-mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 0 4px">Changes (${changes.length})</p>
       ${changes.length ? `<ul class="changes">${changes.map(c => `<li>${esc(c)}</li>`).join("")}</ul>` : '<p class="muted" style="font-size:14px">No changes yet. Edit a quantity or swap a material.</p>'}
       <div class="field" style="margin-top:12px"><label for="rNote">Reason for the change</label><textarea id="rNote" placeholder="e.g. reduce cost while keeping contrast ratio in spec"></textarea></div>
@@ -451,7 +448,7 @@
   function prefillQC() {
     const f = F[fi];
     $("#qLot").value = `LOT-2611-${String(qcLotSeq).padStart(3, "0")}`;
-    $("#qInputs").innerHTML = PARAMS.map(p => {
+    $("#qInputs").innerHTML = fparams(f).map(p => {
       const [lo, hi] = f.spec[p.k];
       let v = lo != null && hi != null ? (lo + hi) / 2 : hi != null ? hi * 0.7 : lo + 1;
       if (p.k === "visc") v = lo - 6;
@@ -459,10 +456,10 @@
     }).join("");
     $("#qInputs").querySelectorAll("input").forEach(i => i.addEventListener("input", renderQCResult));
   }
-  function readQC() { const r = {}; PARAMS.forEach(p => r[p.k] = num($("#q-" + p.k).value)); return r; }
+  function readQC() { const r = {}; fparams(F[fi]).forEach(p => r[p.k] = num($("#q-" + p.k).value)); return r; }
   function renderQCResult() {
     const f = F[fi], r = readQC();
-    const rows = PARAMS.map(p => {
+    const rows = fparams(f).map(p => {
       const v = r[p.k];
       if (isNaN(v)) return { p, v, verdict: "missing" };
       const [lo, hi] = f.spec[p.k];
@@ -478,12 +475,11 @@
   $("#qSave").addEventListener("click", () => {
     const f = F[fi], r = readQC(), lot = $("#qLot").value.trim() || "LOT-2611-" + String(qcLotSeq).padStart(3, "0");
     f.tests.push({ lot, date: TODAY_LABEL, v: f.std, res: r });
-    const n = PARAMS.filter(p => !inSpec(f, p.k, r[p.k])).length;
+    const n = fparams(f).filter(p => !inSpec(f, p.k, r[p.k])).length;
     $("#qMsg").textContent = `${lot} saved to the history of ${f.name}${n ? `, with ${n} parameter${n > 1 ? "s" : ""} out of spec` : ", all in spec"}.`;
     qcLotSeq++; $("#qLot").value = `LOT-2611-${String(qcLotSeq).padStart(3, "0")}`;
     renderQCHistory();
   });
-  fillSelect($("#qParam"), PARAMS.map(p => ({ v: p.k, t: p.n })), "visc");
   $("#qParam").addEventListener("change", e => { state.qParam = e.target.value; renderQCHistory(); });
   const SVGNS = "http://www.w3.org/2000/svg";
   const sv = (tag, a = {}) => { const e = document.createElementNS(SVGNS, tag); for (const k in a) e.setAttribute(k, a[k]); return e; };
@@ -527,10 +523,14 @@
     svg.addEventListener("mouseleave", () => tip.hidden = true);
     box.innerHTML = ""; box.appendChild(svg); box.appendChild(tip);
     $("#qHist").innerHTML = `<thead><tr><th>Lot</th><th>Date</th><th class="r">${P.n}</th><th>All parameters</th></tr></thead><tbody>` +
-      f.tests.slice().reverse().slice(0, 8).map(t => { const n = PARAMS.filter(p => !inSpec(f, p.k, t.res[p.k])).length; const v = t.res[k];
+      f.tests.slice().reverse().slice(0, 8).map(t => { const n = fparams(f).filter(p => !inSpec(f, p.k, t.res[p.k])).length; const v = t.res[k];
         return `<tr><td class="mono nowrap" style="font-size:12.5px">${t.lot}</td><td class="nowrap">${t.date}</td><td class="r">${v.toFixed(P.d)}</td><td>${n ? `<span class="pill crit"><i aria-hidden="true">✕</i>${n} out of spec</span>` : '<span class="pill good"><i aria-hidden="true">✓</i>All in spec</span>'}</td></tr>`; }).join("") + "</tbody>";
   }
-  function renderQC() { fillSelect($("#qForm"), forms, fi); renderQCResult(); renderQCHistory(); }
+  function renderQC() {
+    const f = F[fi]; if (!f.spec[state.qParam]) state.qParam = "visc";
+    fillSelect($("#qForm"), forms, fi); fillSelect($("#qParam"), fparams(f).map(p => ({ v: p.k, t: p.n })), state.qParam);
+    renderQCResult(); renderQCHistory();
+  }
 
   // ---------- Color tab ----------
   function labToRgb(L, a, b) {
@@ -546,7 +546,7 @@
     $("#cL").value = (c.L - 0.35).toFixed(2); $("#cA").value = (c.a + 0.15).toFixed(2); $("#cB").value = (c.b + 0.95).toFixed(2);
   }
   ["#cL", "#cA", "#cB", "#cTol"].forEach(id => $(id).addEventListener("input", renderColorOut));
-  function renderColor() { fillSelect($("#cForm"), forms, fi); const c = F[fi].color; $("#cStd").textContent = `L* ${c.L.toFixed(2)}   a* ${c.a.toFixed(2)}   b* ${c.b.toFixed(2)}`; renderColorOut(); }
+  function renderColor() { fillSelect($("#cForm"), forms, fi); const c = F[fi].color; $("#cStd").textContent = `${F[fi].colorName} · L* ${c.L.toFixed(2)}   a* ${c.a.toFixed(2)}   b* ${c.b.toFixed(2)}`; renderColorOut(); }
   function renderColorOut() {
     const f = F[fi], s = f.color, L = num($("#cL").value), a = num($("#cA").value), b = num($("#cB").value), tol = num($("#cTol").value);
     const box = $("#cOut");
@@ -554,12 +554,12 @@
     const dL = L - s.L, da = a - s.a, db = b - s.b, dE = Math.sqrt(dL * dL + da * da + db * db), ok = dE <= tol;
     const word = (d, pos, neg) => Math.abs(d) < 0.3 ? "Close to standard" : d > 0 ? pos : neg;
     const guide = [];
-    if (dL <= -0.3) guide.push("Sample is darker: reduce the black or colored paste slightly, or add white base.");
-    if (dL >= 0.3) guide.push("Sample is lighter: add a small amount of the main tinting paste.");
-    if (db >= 0.3) guide.push("Sample is yellower: reduce yellow oxide, or add a trace of blue.");
-    if (db <= -0.3) guide.push("Sample is bluer: add a trace of yellow oxide.");
-    if (da >= 0.3) guide.push("Sample is redder: reduce red oxide, or add a trace of green.");
-    if (da <= -0.3) guide.push("Sample is greener: add a trace of red oxide.");
+    if (dL <= -0.3) guide.push("Sample is darker: reduce the black colorant slightly, or add more base.");
+    if (dL >= 0.3) guide.push("Sample is lighter: add a small amount of the main colorant.");
+    if (db >= 0.3) guide.push("Sample is yellower: reduce the yellow colorant, or add a trace of blue colorant.");
+    if (db <= -0.3) guide.push("Sample is bluer: add a trace of yellow colorant.");
+    if (da >= 0.3) guide.push("Sample is redder: reduce the red colorant, or add a trace of green colorant.");
+    if (da <= -0.3) guide.push("Sample is greener: add a trace of red colorant.");
     box.innerHTML = `<div class="card-head"><h2>Result</h2>${ok ? '<span class="pill good"><i aria-hidden="true">✓</i>Within tolerance</span>' : '<span class="pill crit"><i aria-hidden="true">✕</i>Outside tolerance</span>'}</div>
       <div class="big num">ΔE*ab ${dE.toFixed(2)}</div><p class="muted" style="font-size:14px">Tolerance ${tol.toFixed(2)}</p>
       <div class="swatches" role="img" aria-label="Standard and sample color swatches side by side"><div class="sw" style="background:${labToRgb(s.L, s.a, s.b)}"><span>Standard</span></div><div class="sw" style="background:${labToRgb(L, a, b)}"><span>Sample</span></div></div>
